@@ -1,0 +1,10 @@
+//
+//  OCCocoa.xcconfig
+//  OCCocoa
+//
+//  Created by Administrator on 27/04/14.
+//  Copyright (c) 2014 OneClick BVBA. All rights reserved.
+//
+
+//INSTALL_PATH = $(BUILT_PRODUCTS_DIR)
+//SKIP_INSTALL = YES
