@@ -19,13 +19,14 @@ public class JVDebugger: Singleton {
      A dictionary containing all environmental variables that where set in your building scheme
      */
     static let environmentalVars = ProcessInfo.processInfo.environment
-
+    
     public enum debugLevels: String{
         case error = "❌"
         case warning = "⚠️"
         case confirmation = "✅"
         case information = "ℹ️"
         case message = "💬"
+        case event = "✴️"
         case none = ""
     }
     
@@ -109,13 +110,16 @@ public class JVDebugger: Singleton {
         
     }
     
-    public func log<T:Any>(
+    public func log(
         debugLevel:debugLevels = .none,
-        _ message:T
+        _ items:Any...
         ){
         
         #if DEBUG
-            print(debugLevel.rawValue, message)
+            print(debugLevel.rawValue, terminator:" ")
+            for item in items{
+                print(item, terminator:", ")
+            }
         #endif
     }
     
