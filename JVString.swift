@@ -67,5 +67,21 @@ public extension String {
         return lowercased().range(of:subString.lowercased()) != nil
     }
     
+    public func replace(matchPattern:String, replacmentPattern:String, useRegex:Bool = false)->String{
+        
+        let searchOptions:String.CompareOptions = !useRegex ? [.caseInsensitive] :[.caseInsensitive, .regularExpression]
+
+           return replacingOccurrences(of: matchPattern,
+                                       with: replacmentPattern,
+                                       options: searchOptions)
+    }
+    
+    public func quote()->String{
+      return "\""+self+"\""
+    }
+    
+    public func unquote()->String{
+        return replace(matchPattern: "^\"(.*)\"$", replacmentPattern: "$1", useRegex: true)
+    }
     
 }
