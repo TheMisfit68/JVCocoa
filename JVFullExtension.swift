@@ -8,6 +8,11 @@
 
 import Foundation
 
+// Associated properties so that extensions can use extra properties
+// however since conforming types must be hasshable (and therefore equatable)
+// use them sparingly if don't want to implment a whole slew of methods
+// subclasses or classes that use another type are often te better choise
+
 public protocol FullyExtendable: Hashable{
     func property(name propertyName:String) -> Any?
     func setProperty(name propertyName:String,  to objectOrValue: Any)

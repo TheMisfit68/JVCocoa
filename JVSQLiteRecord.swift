@@ -10,59 +10,31 @@
  import GRDB
  
  
- typealias ID = Int
- typealias DataBase = DatabaseQueue
- 
- protocol JVSQliteRecordable: FullyExtendable{
-    
-    var dataBase:DataBase{get set}
-    var lastprimaryKey:Int?{get}
-    
- }
- 
  /// This structure get initialized with a struct of some generic type and
  /// mirrors that struct in the SQLite-database
  
- extension JVSQliteRecordable{
+ struct JVSQliteRecord<ModelType>{
     
-//    init(in dBase:DataBase){
-//        dataBase = dBase
-//    }
+    typealias ID = Int
+    typealias DataBase = DatabaseQueue
     
-    //MARK: - Associated properties due to the lack of stored properties in an extension
-
-    public var dataBase:DataBase{
-        get{
-           return property(name: "dataBase") as! DataBase
-        }
-        set{
-            setProperty(name: "dataBase", to: newValue)
-        }
+    
+    let dataStruct:ModelType
+    let dataBase:DatabaseQueue
+    var matchFields:[String]?
+    private var lastStoredID:ID?
+    
+    init(data:ModelType, in dataBase:DataBase){
+        self.dataStruct = data
+        self.dataBase = dataBase
     }
     
     private var typeAndTableName:String{
         get{
-            return String(describing: type(of: self))
+            return String(describing: type(of: dataStruct))
         }
     }
     
-    private var matchFields:[String]?{
-        get{
-            return property(name: "matchFields") as! [String]?
-        }
-        set{
-            setProperty(name: "matchFields", to: newValue as Any)
-        }
-    }
-    
-    private var lastStoredID:ID?{
-        get{
-            return property(name: "lastStoredID") as! Int?
-        }
-        set{
-            setProperty(name: "lastStoredID", to: newValue as Any)
-        }
-    }
     
     //MARK: - Use FileMaker-terminolgie to add persistensie to this structure
     
@@ -83,7 +55,7 @@
         
         self.matchFields = sqlExpressions.names.components(separatedBy:  ",")
         let  recordsFound:[Row]? = select(sqlString: "SELECT * FROM \(typeAndTableName) WHERE \(sqlExpressions.conditions)")
-
+        
         return recordsFound
     }
     
@@ -94,12 +66,29 @@
         
     }
     
-    
     public mutating func changeRecord(matchFields:[String])->Bool{
         
         self.matchFields = matchFields
         return execute(sqlString: "UPDATE \(typeAndTableName) SET \(sqlExpressions.pairs) WHERE \(sqlExpressions.conditions)")
         
+    }
+    
+    public mutating func lastPrimaryKey()->ID?{
+        
+        do{
+            return try dataBase.inDatabase {db in
+                let newID = try Int.fetchOne(db, "SELECT seq FROM sqlite_sequence WHERE name='\(typeAndTableName)'")
+                if lastStoredID != newID{
+                    lastStoredID = newID
+                    return newID
+                }else{
+                    return nil
+                }
+                
+            }
+        }catch{
+            return nil
+        }
     }
     
     
@@ -110,11 +99,11 @@
         let values = sqlExpressions.values
         do{
             try dataBase.inDatabase {db in
-                debugger.log(debugLevel: .message, sqlString, values)
+                debugger.log(debugLevel: .Message, sqlString, values)
                 try db.execute(sqlString, arguments: StatementArguments(values))
             }
         }catch{
-            debugger.log(debugLevel: .error, error, values)
+            debugger.log(debugLevel: .Error, error, values)
             return false
         }
         return true
@@ -125,11 +114,11 @@
         let values = sqlExpressions.values
         do{
             return try dataBase.inDatabase {db in
-                debugger.log(debugLevel: .message, sqlString, values)
+                debugger.log(debugLevel: .Message, sqlString, values)
                 return try Row.fetchAll(db, sqlString)
             }
         }catch{
-            debugger.log(debugLevel: .error, error, values)
+            debugger.log(debugLevel: .Error, error, values)
             return nil
         }
         
@@ -183,26 +172,9 @@
             return (fieldNames, placeholders, fieldPairs, fieldValues, matchConditions)
         }
     }
-    
-    public mutating func lastPrimaryKey()->ID?{
-        
-        do{
-            return try dataBase.inDatabase {db in
-                let newID = try Int.fetchOne(db, "SELECT seq FROM sqlite_sequence WHERE name='\(typeAndTableName)'")
-                if lastStoredID != newID{
-                    lastStoredID = newID
-                    return newID
-                }else{
-                    return nil
-                }
-                
-            }
-        }catch{
-            return nil
-        }
-    }
+
     
  }
  
- 
+
  

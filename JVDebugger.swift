@@ -111,7 +111,7 @@ public class JVDebugger: Singleton {
     }
     
     public func log(
-        debugLevel:DebugLevels = .none,
+        debugLevel:JVDebugLevels = .None,
         _ items:Any...
         ){
         
