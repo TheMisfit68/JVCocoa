@@ -22,7 +22,7 @@
     let dataStruct:ModelType
     let dataBase:DatabaseQueue
     var matchFields:[String]?
-    private var lastStoredID:ID?
+    var newPrimaryKey:ID?
     
     init(data:ModelType, in dataBase:DataBase){
         self.dataStruct = data
@@ -51,6 +51,45 @@
         return true
     }
     
+    public mutating func createRecord()->Bool{
+        
+        self.matchFields = nil
+        // Make this a single return statement again
+        let sqlSuccesfullyExecuted = execute(sqlString: "INSERT INTO \(typeAndTableName) (\(sqlExpressions.names)) VALUES (\(sqlExpressions.placeholders))")
+        
+        // Check extra conditions and store any newPrimaryKey
+        if sqlSuccesfullyExecuted{
+            return dataBase.inDatabase {db in
+                
+                if let primaryKeyName = try? db.primaryKey(typeAndTableName){
+                    if let latestPK = try? Int.fetchOne(db, "SELECT \(primaryKeyName) FROM '\(typeAndTableName)' ORDER BY DESC"){
+                        if latestPK != newPrimaryKey{
+                            newPrimaryKey = latestPK
+                            return true
+                        }
+                    }
+                }
+                return false
+            }
+            
+        }else{
+            return false
+        }
+    }
+    
+    public mutating func changeRecord(matchFields:[String])->Bool{
+        
+        self.matchFields = matchFields
+        let sqlSuccesfullyExecuted = execute(sqlString: "UPDATE \(typeAndTableName) SET \(sqlExpressions.pairs) WHERE \(sqlExpressions.conditions)")
+        
+        // Check extra conditions
+        if sqlSuccesfullyExecuted{
+            return dataBase.inDatabase {db in return (db.changesCount > 0)}
+        }else{
+            return false
+        }
+    }
+    
     public mutating func findRecords()->[Row]?{
         
         self.matchFields = sqlExpressions.names.components(separatedBy:  ",")
@@ -58,39 +97,6 @@
         
         return recordsFound
     }
-    
-    public mutating func createRecord()->Bool{
-        
-        self.matchFields = nil
-        return execute(sqlString: "INSERT INTO \(typeAndTableName) (\(sqlExpressions.names)) VALUES (\(sqlExpressions.placeholders))")
-        
-    }
-    
-    public mutating func changeRecord(matchFields:[String])->Bool{
-        
-        self.matchFields = matchFields
-        return execute(sqlString: "UPDATE \(typeAndTableName) SET \(sqlExpressions.pairs) WHERE \(sqlExpressions.conditions)")
-        
-    }
-    
-    public mutating func lastPrimaryKey()->ID?{
-        
-        do{
-            return try dataBase.inDatabase {db in
-                let newID = try Int.fetchOne(db, "SELECT seq FROM sqlite_sequence WHERE name='\(typeAndTableName)'")
-                if lastStoredID != newID{
-                    lastStoredID = newID
-                    return newID
-                }else{
-                    return nil
-                }
-                
-            }
-        }catch{
-            return nil
-        }
-    }
-    
     
     //MARK: - Low level SQL functions from the GRDB framework
     
@@ -130,7 +136,7 @@
         get{
             
             // Return all properties as an array of labels and an array of values
-            let introSpectionData = Mirror(reflecting: self)
+            let introSpectionData = Mirror(reflecting: dataStruct)
             var propertyNames:[String] = []
             var propertyPairs:[String] = []
             var propertyValues:[Any] = []
@@ -172,9 +178,9 @@
             return (fieldNames, placeholders, fieldPairs, fieldValues, matchConditions)
         }
     }
-
+    
     
  }
  
-
+ 
  

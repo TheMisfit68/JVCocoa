@@ -120,6 +120,7 @@ public class JVDebugger: Singleton {
             for item in items{
                 print(item, terminator:", ")
             }
+            print()
         #endif
     }
     
