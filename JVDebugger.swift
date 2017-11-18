@@ -117,15 +117,11 @@ public class JVDebugger: Singleton {
         
         #if DEBUG
             print(debugLevel.rawValue, terminator:" ")
-            for item in items{
-                print(item, terminator:", ")
-            }
-            print()
+            print(items, separator:", ")
         #endif
     }
     
     public func drawSeperatorInConsole(){
-        
         #if DEBUG
             print("＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿")
         #endif

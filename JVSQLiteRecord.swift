@@ -18,63 +18,42 @@
     typealias ID = Int
     typealias DataBase = DatabaseQueue
     
-    
-    let dataStruct:ModelType
     let dataBase:DatabaseQueue
+    let dataStruct:ModelType
+    let typeAndTableName:String
+    var primaryKeyNames:[String]!
+    
+    public var currentPrimaryKey:ID?
     var matchFields:[String]?
-    var newPrimaryKey:ID?
     
     init(data:ModelType, in dataBase:DataBase){
-        self.dataStruct = data
         self.dataBase = dataBase
+        self.dataStruct = data
+        self.typeAndTableName = String(describing: type(of: dataStruct))
+        self.primaryKeyNames = dataBase.inDatabase {db in return try? db.primaryKey(typeAndTableName).columns}
     }
-    
-    private var typeAndTableName:String{
-        get{
-            return String(describing: type(of: dataStruct))
-        }
-    }
-    
     
     //MARK: - Use FileMaker-terminolgie to add persistensie to this structure
     
     public mutating func changeOrCreateRecord(matchFields:[String]? = nil)->Bool{
         
         // This an Update or Insert a.k.a an 'UpSert'
-        var recordChanged:Bool = false
+        var sqlSuccesfullyExecuted:Bool = false
         if matchFields != nil{
-            recordChanged = changeRecord(matchFields:matchFields!)
+            sqlSuccesfullyExecuted = changeRecord(matchFields:matchFields!)
         }
-        if (matchFields == nil) || !recordChanged{
-            return createRecord()
+        if (matchFields == nil) || !sqlSuccesfullyExecuted{
+            sqlSuccesfullyExecuted = createRecord()
         }
-        return true
+        return sqlSuccesfullyExecuted
     }
     
     public mutating func createRecord()->Bool{
         
         self.matchFields = nil
-        // Make this a single return statement again
         let sqlSuccesfullyExecuted = execute(sqlString: "INSERT INTO \(typeAndTableName) (\(sqlExpressions.names)) VALUES (\(sqlExpressions.placeholders))")
         
-        // Check extra conditions and store any newPrimaryKey
-        if sqlSuccesfullyExecuted{
-            return dataBase.inDatabase {db in
-                
-                if let primaryKeyName = try? db.primaryKey(typeAndTableName){
-                    if let latestPK = try? Int.fetchOne(db, "SELECT \(primaryKeyName) FROM '\(typeAndTableName)' ORDER BY DESC"){
-                        if latestPK != newPrimaryKey{
-                            newPrimaryKey = latestPK
-                            return true
-                        }
-                    }
-                }
-                return false
-            }
-            
-        }else{
-            return false
-        }
+        return changeCurrentPrimaryKey(sqlSuccesfullyExecuted)
     }
     
     public mutating func changeRecord(matchFields:[String])->Bool{
@@ -82,12 +61,8 @@
         self.matchFields = matchFields
         let sqlSuccesfullyExecuted = execute(sqlString: "UPDATE \(typeAndTableName) SET \(sqlExpressions.pairs) WHERE \(sqlExpressions.conditions)")
         
-        // Check extra conditions
-        if sqlSuccesfullyExecuted{
-            return dataBase.inDatabase {db in return (db.changesCount > 0)}
-        }else{
-            return false
-        }
+        // Check extra conxditions
+        return changeCurrentPrimaryKey(sqlSuccesfullyExecuted && dataBase.inDatabase {db in return (db.changesCount > 0)})
     }
     
     public mutating func findRecords()->[Row]?{
@@ -96,6 +71,26 @@
         let  recordsFound:[Row]? = select(sqlString: "SELECT * FROM \(typeAndTableName) WHERE \(sqlExpressions.conditions)")
         
         return recordsFound
+    }
+    
+    private mutating func changeCurrentPrimaryKey(_ enabled:Bool)->Bool{
+        
+        if enabled{
+            
+            dataBase.inDatabase {db in
+                
+                    if let pkName = primaryKeyNames?.first,
+                        let latestPK = try? Int.fetchOne(db, "SELECT \(pkName) FROM '\(typeAndTableName)' ORDER BY \(pkName) DESC"){
+                        
+                        currentPrimaryKey = latestPK
+                    }
+                }
+            
+        }else{
+            currentPrimaryKey = nil
+        }
+        
+        return enabled
     }
     
     //MARK: - Low level SQL functions from the GRDB framework
