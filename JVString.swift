@@ -77,7 +77,11 @@ public extension String {
     }
     
     public func quote()->String{
-      return "\""+self+"\""
+      return "\"\(self)\""
+    }
+    
+    public func singleQuote()->String{
+        return "'\(self)'"
     }
     
     public func unquote()->String{

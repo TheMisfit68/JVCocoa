@@ -20,14 +20,14 @@ public class JVDebugger: Singleton {
      */
     static let environmentalVars = ProcessInfo.processInfo.environment
     
-    public enum debugLevels: String{
-        case error = "❌"
-        case warning = "⚠️"
-        case confirmation = "✅"
-        case information = "ℹ️"
-        case message = "💬"
-        case event = "✴️"
-        case none = ""
+    public enum JVDebugLevels: String{
+        case Error = "❌"
+        case Warning = "⚠️"
+        case Succes = "✅"
+        case Info = "ℹ️"
+        case Message = "💬"
+        case Event = "✴️"
+        case None = ""
     }
     
     public static let sharedInstance:JVDebugger = JVDebugger()
@@ -38,7 +38,7 @@ public class JVDebugger: Singleton {
     public func logThisMethod<T:Any>(
         
         type:T ,
-        _ debugLevel:debugLevels = .none,
+        _ debugLevel:JVDebugLevels = .None,
         _ function: String = #function,
         _ file: String = #file,
         _ line: Int = #line){
@@ -70,7 +70,7 @@ public class JVDebugger: Singleton {
     public func logThisMethod<T:AnyObject>(
         
         object:T,
-        _ debugLevel:debugLevels = .none,
+        _ debugLevel:JVDebugLevels = .None,
         _ function: String = #function,
         _ file: String = #file,
         _ line: Int = #line){
@@ -111,20 +111,17 @@ public class JVDebugger: Singleton {
     }
     
     public func log(
-        debugLevel:debugLevels = .none,
+        debugLevel:JVDebugLevels = .None,
         _ items:Any...
         ){
         
         #if DEBUG
             print(debugLevel.rawValue, terminator:" ")
-            for item in items{
-                print(item, terminator:", ")
-            }
+            print(items, separator:", ")
         #endif
     }
     
     public func drawSeperatorInConsole(){
-        
         #if DEBUG
             print("＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿")
         #endif

@@ -115,7 +115,7 @@ extension JVView:JVConstrainableView, FullyExtendable{
                 }
                 else{
                     // No common ancestor
-                    debugger.log(debugLevel: .error, "\(self) has no common ancestor with \(String(describing: secondView))")
+                    debugger.log(debugLevel: .Error, "\(self) has no common ancestor with \(String(describing: secondView))")
                 }
             }
             
@@ -329,7 +329,7 @@ public class JVBaseView:JVView{
                 }
             }
             
-            debugger.log(debugLevel: .message, "Frame: \(frame)")
+            debugger.log(debugLevel: .Message, "Frame: \(frame)")
             debugger.log(self)
             
         #endif

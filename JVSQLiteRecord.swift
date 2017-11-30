@@ -10,114 +10,97 @@
  import GRDB
  
  
- typealias ID = Int
- typealias DataBase = DatabaseQueue
- 
- protocol JVSQliteRecordable: FullyExtendable{
-    
-    var dataBase:DataBase{get set}
-    var lastprimaryKey:Int?{get}
-    
- }
- 
  /// This structure get initialized with a struct of some generic type and
  /// mirrors that struct in the SQLite-database
  
- extension JVSQliteRecordable{
+ struct JVSQliteRecord<ModelType>{
     
-//    init(in dBase:DataBase){
-//        dataBase = dBase
-//    }
+    typealias ID = Int
+    typealias DataBase = DatabaseQueue
     
-    //MARK: - Associated properties due to the lack of stored properties in an extension
-
-    public var dataBase:DataBase{
-        get{
-           return property(name: "dataBase") as! DataBase
-        }
-        set{
-            setProperty(name: "dataBase", to: newValue)
+    private let dataBase:DataBase
+    private let dataStruct:ModelType
+    private let typeAndTableName:String
+    private let primaryKeyNames:[String]
+    
+    var matchFields:[String]?=nil{
+        didSet {
+            updateSqlExpressions()
         }
     }
+    private var sqlExpressions = (names:"", placeholders:"", pairs:"", values:[], conditions:"")
     
-    private var typeAndTableName:String{
-        get{
-            return String(describing: type(of: self))
-        }
-    }
-    
-    private var matchFields:[String]?{
-        get{
-            return property(name: "matchFields") as! [String]?
-        }
-        set{
-            setProperty(name: "matchFields", to: newValue as Any)
-        }
-    }
-    
-    private var lastStoredID:ID?{
-        get{
-            return property(name: "lastStoredID") as! Int?
-        }
-        set{
-            setProperty(name: "lastStoredID", to: newValue as Any)
-        }
+    init(data:ModelType, in dataBase:DataBase){
+        self.dataBase = dataBase
+        self.dataStruct = data
+        self.typeAndTableName = String(describing: type(of: dataStruct))
+        
+        let tableName = typeAndTableName
+        self.primaryKeyNames = dataBase.inDatabase {db in return try? db.primaryKey(tableName).columns} ?? []
     }
     
     //MARK: - Use FileMaker-terminolgie to add persistensie to this structure
     
-    public mutating func changeOrCreateRecord(matchFields:[String]? = nil)->Bool{
+    public mutating func changeOrCreateRecord(matchFields:[String]? = nil)->[Row]?{
         
         // This an Update or Insert a.k.a an 'UpSert'
-        var recordChanged:Bool = false
-        if matchFields != nil{
-            recordChanged = changeRecord(matchFields:matchFields!)
-        }
-        if (matchFields == nil) || !recordChanged{
-            return createRecord()
-        }
-        return true
-    }
-    
-    public mutating func findRecords()->[Row]?{
+        var affectedRows:[Row]?
+        self.matchFields = matchFields
+        affectedRows = execute(sqlString: "UPDATE \(typeAndTableName) SET \(sqlExpressions.pairs) WHERE \(sqlExpressions.conditions)")
         
-        self.matchFields = sqlExpressions.names.components(separatedBy:  ",")
-        let  recordsFound:[Row]? = select(sqlString: "SELECT * FROM \(typeAndTableName) WHERE \(sqlExpressions.conditions)")
-
-        return recordsFound
+        if (affectedRows == nil) || (affectedRows! == []){
+            self.matchFields = nil
+            affectedRows = execute(sqlString: "INSERT INTO \(typeAndTableName) (\(sqlExpressions.names)) VALUES (\(sqlExpressions.placeholders))")
+        }
+        return affectedRows
     }
     
-    public mutating func createRecord()->Bool{
+    public mutating func createRecord()->[Row]?{
         
         self.matchFields = nil
         return execute(sqlString: "INSERT INTO \(typeAndTableName) (\(sqlExpressions.names)) VALUES (\(sqlExpressions.placeholders))")
-        
     }
     
-    
-    public mutating func changeRecord(matchFields:[String])->Bool{
+    public mutating func changeRecord(matchFields:[String])->[Row]?{
         
         self.matchFields = matchFields
         return execute(sqlString: "UPDATE \(typeAndTableName) SET \(sqlExpressions.pairs) WHERE \(sqlExpressions.conditions)")
         
     }
     
+    public mutating func findRecords()->[Row]?{
+        
+        self.matchFields = sqlExpressions.names.components(separatedBy:  ",")
+        return select(sqlString: "SELECT * FROM \(typeAndTableName) WHERE \(sqlExpressions.conditions)")
+    }
+    
     
     //MARK: - Low level SQL functions from the GRDB framework
     
-    private func execute(sqlString:String)->Bool{
+    private mutating func execute(sqlString:String)->[Row]?{
         
         let values = sqlExpressions.values
         do{
             try dataBase.inDatabase {db in
-                debugger.log(debugLevel: .message, sqlString, values)
+                debugger.log(debugLevel: .Message, sqlString, values)
                 try db.execute(sqlString, arguments: StatementArguments(values))
             }
         }catch{
-            debugger.log(debugLevel: .error, error, values)
-            return false
+            debugger.log(debugLevel: .Error, error, values)
         }
-        return true
+        
+        // Registers the rows that where affected by the previous execute
+        var affectedRows:[Row]? = nil
+        if primaryKeyNames != []{
+            let pkFields = primaryKeyNames.joined(separator: ",")
+            
+            let sqlCommandType:String = String(describing: sqlString.split(separator: " ").first!).uppercased()
+            if sqlCommandType == "INSERT"{
+                self.matchFields = sqlExpressions.names.components(separatedBy:  ",")
+            }
+            affectedRows = select(sqlString:"SELECT \(pkFields) FROM \(typeAndTableName) WHERE \(sqlExpressions.conditions)")
+        }
+        return affectedRows
     }
     
     private func select(sqlString:String)->[Row]?{
@@ -125,30 +108,31 @@
         let values = sqlExpressions.values
         do{
             return try dataBase.inDatabase {db in
-                debugger.log(debugLevel: .message, sqlString, values)
+                debugger.log(debugLevel: .Message, sqlString, values)
                 return try Row.fetchAll(db, sqlString)
             }
         }catch{
-            debugger.log(debugLevel: .error, error, values)
+            debugger.log(debugLevel: .Error, error, values)
             return nil
         }
         
     }
     
-    // Format fieldnames, values, matching-conditions, ...
-    // for easy use within SQL -statements
-    private var sqlExpressions:(names:String, placeholders:String, pairs:String, values:[Any], conditions:String){
-        get{
+    
+    private mutating func updateSqlExpressions(){
+        
+        // Return all properties as
+        // an array of labels and an array of values
+        // an array of label and value-pairs
+        let introSpectionData = Mirror(reflecting: dataStruct)
+        var propertyNames:[String] = []
+        var propertyPairs:[String] = []
+        var propertyValues:[Any] = []
+        var propertyMatches:[String] = []
+        
+        for case let (propertyName?, propertyValue) in introSpectionData.children{
             
-            // Return all properties as an array of labels and an array of values
-            let introSpectionData = Mirror(reflecting: self)
-            var propertyNames:[String] = []
-            var propertyPairs:[String] = []
-            var propertyValues:[Any] = []
-            var propertyMatches:[String] = []
-            
-            for case let (propertyName?, propertyValue) in introSpectionData.children{
-                
+            if !primaryKeyNames.contains(propertyName){
                 propertyNames.append(propertyName)
                 propertyPairs.append("\(propertyName) = ?")
                 
@@ -157,7 +141,11 @@
                 propertyValues.append(unwrappedAnyValue)
                 
                 if let matchNames = matchFields{
-                    let searchValue =  String(describing:unwrappedAnyValue)
+                    var searchValue =  String(describing:unwrappedAnyValue)
+                    if type(of:unwrappedAnyValue) == String.self{
+                        searchValue = searchValue.quote()
+                    }
+                    
                     if matchNames.contains(propertyName) && (searchValue != ""){
                         
                         // Use FileMaker compatible search-symbols
@@ -173,36 +161,22 @@
                     }
                 }
             }
-            
-            let fieldNames:String = propertyNames.joined(separator: ",")
-            let placeholders:String = Array(repeating: "?", count:Int(propertyNames.count)).joined(separator: ",")
-            let fieldPairs = propertyPairs.joined(separator: ",")
-            let fieldValues = propertyValues
-            let matchConditions = propertyMatches.joined(separator: " AND ")
-            
-            return (fieldNames, placeholders, fieldPairs, fieldValues, matchConditions)
         }
+        
+        let fieldNames:String = propertyNames.joined(separator: ",")
+        let placeholders:String = Array(repeating: "?", count:Int(propertyNames.count)).joined(separator: ",")
+        let fieldPairs = propertyPairs.joined(separator: ",")
+        let fieldValues = propertyValues
+        let matchConditions = propertyMatches.joined(separator: " AND ")
+        
+        sqlExpressions = (fieldNames, placeholders, fieldPairs, fieldValues, matchConditions)
     }
     
-    public mutating func lastPrimaryKey()->ID?{
-        
-        do{
-            return try dataBase.inDatabase {db in
-                let newID = try Int.fetchOne(db, "SELECT seq FROM sqlite_sequence WHERE name='\(typeAndTableName)'")
-                if lastStoredID != newID{
-                    lastStoredID = newID
-                    return newID
-                }else{
-                    return nil
-                }
-                
-            }
-        }catch{
-            return nil
-        }
-    }
     
  }
+ 
+ 
+ 
  
  
  
