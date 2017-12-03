@@ -28,7 +28,7 @@
             updateSqlExpressions()
         }
     }
-    private var sqlExpressions = (names:"", placeholders:"", pairs:"", values:[], conditions:"")
+    private var sqlExpressions = (names:"", placeholders:"", pairs:"", values:[], matchConditions:"")
     
     init(data:ModelType, in dataBase:DataBase){
         self.dataBase = dataBase
@@ -46,7 +46,7 @@
         // This an Update or Insert a.k.a an 'UpSert'
         var affectedRows:[Row]?
         self.matchFields = matchFields
-        affectedRows = execute(sqlString: "UPDATE \(typeAndTableName) SET \(sqlExpressions.pairs) WHERE \(sqlExpressions.conditions)")
+        affectedRows = execute(sqlString: "UPDATE \(typeAndTableName) SET \(sqlExpressions.pairs) WHERE \(sqlExpressions.matchConditions)")
         
         if (affectedRows == nil) || (affectedRows! == []){
             self.matchFields = nil
@@ -64,14 +64,15 @@
     public mutating func changeRecord(matchFields:[String])->[Row]?{
         
         self.matchFields = matchFields
-        return execute(sqlString: "UPDATE \(typeAndTableName) SET \(sqlExpressions.pairs) WHERE \(sqlExpressions.conditions)")
+        return execute(sqlString: "UPDATE \(typeAndTableName) SET \(sqlExpressions.pairs) WHERE \(sqlExpressions.matchConditions)")
         
     }
     
     public mutating func findRecords()->[Row]?{
         
+        self.matchFields = nil // makes sure to calculate the names first before usin them the first time
         self.matchFields = sqlExpressions.names.components(separatedBy:  ",")
-        return select(sqlString: "SELECT * FROM \(typeAndTableName) WHERE \(sqlExpressions.conditions)")
+        return select(sqlString: "SELECT * FROM \(typeAndTableName) WHERE \(sqlExpressions.matchConditions)")
     }
     
     
@@ -98,7 +99,7 @@
             if sqlCommandType == "INSERT"{
                 self.matchFields = sqlExpressions.names.components(separatedBy:  ",")
             }
-            affectedRows = select(sqlString:"SELECT \(pkFields) FROM \(typeAndTableName) WHERE \(sqlExpressions.conditions)")
+            affectedRows = select(sqlString:"SELECT \(pkFields) FROM \(typeAndTableName) WHERE \(sqlExpressions.matchConditions)")
         }
         return affectedRows
     }
@@ -146,7 +147,7 @@
                         searchValue = searchValue.quote()
                     }
                     
-                    if matchNames.contains(propertyName) && (searchValue != ""){
+                    if (searchValue != "nil") && matchNames.contains(propertyName) && (searchValue != ""){
                         
                         // Use FileMaker compatible search-symbols
                         var searchExpression:String = "\(propertyName) = \(searchValue)"
@@ -170,8 +171,7 @@
         let matchConditions = propertyMatches.joined(separator: " AND ")
         
         sqlExpressions = (fieldNames, placeholders, fieldPairs, fieldValues, matchConditions)
-    }
-    
+    }    
     
  }
  
