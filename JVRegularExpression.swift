@@ -45,7 +45,7 @@ extension NSRegularExpression{
     //MARK: - Matching
     
     public func matchedByString(stringToCheck: String, options: NSRegularExpression.MatchingOptions = []) -> Bool {
-        return numberOfMatches(in: stringToCheck, options: options, range: NSMakeRange(0, stringToCheck.characters.count)) > 0
+        return numberOfMatches(in: stringToCheck, options: options, range: NSMakeRange(0, stringToCheck.count)) > 0
     }
     
 }
@@ -60,7 +60,7 @@ extension String:RegularExpressionMatchable {
     
    public func matchesExpression(pattern: String, options:NSRegularExpression.Options = [.caseInsensitive]) -> Bool {
         if let regex = try? NSRegularExpression(pattern: pattern, options: options){
-            return regex.numberOfMatches(in: self, range: NSMakeRange(0, self.characters.count)) > 0
+            return regex.numberOfMatches(in: self, range: NSMakeRange(0, self.count)) > 0
         }
         return false
     }
