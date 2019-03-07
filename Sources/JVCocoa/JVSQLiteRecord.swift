@@ -6,9 +6,7 @@
  //  Copyright © 2017 OneClick. All rights reserved.
  //
  
- import Foundation
- import GRDB
- 
+ import Foundation 
  
  /// This structure get initialized with a struct of some generic type and
  /// mirrors that struct in the SQLite-database
