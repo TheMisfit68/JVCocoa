@@ -1,0 +1,7 @@
+
+create list property for enums based on the rawvalues (also works for string enums now) using a protocol extension
+
+
+Documentation-Xcode-extension to document the library code
+
+Migrate remaining code from OCCocoa

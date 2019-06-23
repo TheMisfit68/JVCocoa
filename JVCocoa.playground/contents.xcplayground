@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<playground version='6.0' target-platform='osx'>
+    <pages>
+        <page name='SwiftMigration'/>
+        <page name='ShortTests'/>
+        <page name='ViewTesting'/>
+        <page name='ConfirmedBugRetesting'/>
+    </pages>
+</playground>
