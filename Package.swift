@@ -21,8 +21,8 @@ let package = Package(
         .target(
             name: "JVCocoa",
             dependencies: []),
-        .testTarget(
-            name: "JVCocoaTests",
-            dependencies: ["JVCocoa"]),
+//        .testTarget(
+//            name: "JVCocoaTests",
+//            dependencies: ["JVCocoa"]),
     ]
 )

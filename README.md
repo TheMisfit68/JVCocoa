@@ -1,3 +1,3 @@
 # JVCocoa
 
-A description of this package.
+A Cocoa-based library for personal use.
