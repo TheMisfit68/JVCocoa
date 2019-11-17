@@ -116,7 +116,7 @@ public class JVDebugger: Singleton {
         ){
         
         #if DEBUG
-            print(debugLevel.rawValue, terminator:" ")
+            print(debugLevel.rawValue, terminator:"\t")
             print(items, separator:", ")
         #endif
     }
