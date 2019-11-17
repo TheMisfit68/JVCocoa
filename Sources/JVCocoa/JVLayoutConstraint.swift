@@ -108,8 +108,8 @@ extension NSLayoutConstraint:JVInstallableConstraint{
                             if let ancestorIdentifier = nearestCommonAncestor.identifier?.rawValue{
                                 extraIdentifierString =  ", '\(ancestorIdentifier)'"
                             }
-                            JVDebugger.sharedInstance.log("✏️ Constraint changed \(nearestCommonAncestor.className)\(extraIdentifierString):")
-                            JVDebugger.sharedInstance.log(self)
+                            JVDebugger.shared.log("✏️ Constraint changed \(nearestCommonAncestor.className)\(extraIdentifierString):")
+                            JVDebugger.shared.log(self)
                         }
                         
                     #endif
@@ -136,8 +136,8 @@ extension NSLayoutConstraint:JVInstallableConstraint{
                         if let ancestorIdentifier = nearestCommonAncestor.identifier?.rawValue{
                             extraIdentifierString =  ", '\(ancestorIdentifier)'"
                         }
-                        JVDebugger.sharedInstance.log("✅ Constraint added to \(nearestCommonAncestor.className)\(extraIdentifierString):")
-                        JVDebugger.sharedInstance.log(self)
+                        JVDebugger.shared.log("✅ Constraint added to \(nearestCommonAncestor.className)\(extraIdentifierString):")
+                        JVDebugger.shared.log(self)
                     }
                     
                 #endif
@@ -164,8 +164,8 @@ extension NSLayoutConstraint:JVInstallableConstraint{
                     if let ancestorIdentifier = nearestCommonAncestor.identifier?.rawValue{
                         extraIdentifierString =  ", '\(ancestorIdentifier)'"
                     }
-                    JVDebugger.sharedInstance.log("❌ Constraint removed from \(nearestCommonAncestor.className)\(extraIdentifierString):")
-                    JVDebugger.sharedInstance.log(self)
+                    JVDebugger.shared.log("❌ Constraint removed from \(nearestCommonAncestor.className)\(extraIdentifierString):")
+                    JVDebugger.shared.log(self)
                 }
                 
             #endif

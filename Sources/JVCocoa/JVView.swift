@@ -115,7 +115,7 @@ extension JVView:JVConstrainableView, FullyExtendable{
                 }
                 else{
                     // No common ancestor
-                    JVDebugger.sharedInstance.log(debugLevel: .Error, "\(self) has no common ancestor with \(String(describing: secondView))")
+                    JVDebugger.shared.log(debugLevel: .Error, "\(self) has no common ancestor with \(String(describing: secondView))")
                 }
             }
             
@@ -329,8 +329,8 @@ public class JVBaseView:JVView{
                 }
             }
             
-            JVDebugger.sharedInstance.log(debugLevel: .Message, "Frame: \(frame)")
-            JVDebugger.sharedInstance.log(self)
+            JVDebugger.shared.log(debugLevel: .Message, "Frame: \(frame)")
+            JVDebugger.shared.log(self)
             
         #endif
     }
@@ -350,8 +350,8 @@ public class JVBaseView:JVView{
             if  debugConstraints.equalsTrue{
                 
                 print(self)
-                JVDebugger.sharedInstance.log("Constraints before:")
-                JVDebugger.sharedInstance.log(constraints)
+                JVDebugger.shared.log("Constraints before:")
+                JVDebugger.shared.log(constraints)
                 print()
                 
             }
@@ -365,9 +365,9 @@ public class JVBaseView:JVView{
                 
                 print()
                 print()
-                JVDebugger.sharedInstance.log("Constraints after:")
-                JVDebugger.sharedInstance.log(constraints)
-                JVDebugger.sharedInstance.drawSeperatorInConsole()
+                JVDebugger.shared.log("Constraints after:")
+                JVDebugger.shared.log(constraints)
+                JVDebugger.shared.drawSeperatorInConsole()
                 print()
                 
             }

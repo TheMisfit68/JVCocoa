@@ -30,7 +30,7 @@ public class JVDebugger: Singleton {
         case None = ""
     }
     
-    public static let sharedInstance:JVDebugger = JVDebugger()
+    public static let shared:JVDebugger = JVDebugger()
     
     //TODO: Replace the first macro with the second one whenever it is possible to replace the empty string
     //with a default argument of self, a.k.a. the caller-side-object that you want to log

@@ -10,5 +10,5 @@ import Foundation
 
 public protocol Singleton{
     associatedtype singletonType // Use the type of the class that will later conform to this protocol as a typedefinition here
-    static var sharedInstance: singletonType { get }
+    static var shared: singletonType { get }
 }
