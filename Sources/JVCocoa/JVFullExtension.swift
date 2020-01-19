@@ -23,9 +23,9 @@ public protocol FullyExtendable: Hashable{
 // For each object to extend (based on its unique memoryaddress)
 // store a dictionary of propertynames with its values
 
-private typealias hashKey = Int
-private typealias propertyName = String
-private var extensionProperties = [hashKey: [propertyName: Any]]()
+fileprivate typealias hashKey = Int
+fileprivate typealias propertyName = String
+fileprivate var extensionProperties:[hashKey: [propertyName: Any]] = [hashKey: [propertyName: Any]]()
 
 public extension FullyExtendable{
 
@@ -33,12 +33,12 @@ public extension FullyExtendable{
 	Gets an associated object or value
 
 	- parameter aName: The name of the property that was stored
-
+     
 	- returns: The object that was previously stored
 	*/
     func property(name propertyName: String) -> Any?{
-        let allProperties = extensionProperties[self.hashValue]
-		return allProperties?[propertyName]
+        let myProperties = extensionProperties[self.hashValue]
+		return myProperties?[propertyName]
 	}
 
 	/**
@@ -51,6 +51,7 @@ public extension FullyExtendable{
 
 		if var myProperties = extensionProperties[self.hashValue]{
 			myProperties[propertyName] = objectOrValue
+            extensionProperties[self.hashValue] = myProperties
 		}else{
 			extensionProperties[self.hashValue] = [propertyName: objectOrValue]
 		}

@@ -27,6 +27,7 @@ public class JVDebugger: Singleton {
         case Info = "ℹ️"
         case Message = "💬"
         case Event = "✴️"
+        case Test = "🧪"
         case None = ""
     }
     
@@ -80,14 +81,6 @@ public class JVDebugger: Singleton {
             
             let classOfObject = className(object: object)
             
-            var  viewIdentifierString = ""
-            if let view = object as? JVView{
-                let  viewIdentifier = view.identifier?.rawValue ?? ""
-                if viewIdentifier != ""{
-                    viewIdentifierString = "-\(viewIdentifier)"
-                }
-            }
-            
             // Clear any unresolved expressions from the variables received from the callers side
             let functionString:String
             if function.containsSubstring("expr") || function == ""{
@@ -103,17 +96,14 @@ public class JVDebugger: Singleton {
                 fileString = "\(file) "
             }
             
-            print(debugLevel.rawValue, "\(classOfObject)\(viewIdentifierString)\(functionString)(\(fileString)line \(line) :")
+            print(debugLevel.rawValue, "\(classOfObject)\(functionString)(\(fileString)line \(line) :")
             print(String(describing:object))
             
         #endif
         
     }
     
-    public func log(
-        debugLevel:JVDebugLevels = .None,
-        _ items:Any...
-        ){
+    public func log(debugLevel:JVDebugLevels = .None, _ items:Any...){
         
         #if DEBUG
             print(debugLevel.rawValue, terminator:"\t")

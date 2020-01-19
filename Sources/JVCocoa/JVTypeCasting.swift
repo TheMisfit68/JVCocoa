@@ -8,7 +8,7 @@
 
 import Foundation
 
-/// Unwrap an optional that might be stored inside an Any (without the ablility to downcast)
+// Unwrap an optional that might be stored inside an Any (without the ablility to downcast)
 func unwrap<T>(any: T) -> Any
 {
     let mirror = Mirror(reflecting: any)
