@@ -22,6 +22,21 @@ public extension FileManager{
         }
     }
     
-
+    func rename(_ originalURL:URL, to newURL:URL){
+        let originalName = originalURL.lastPathComponent
+        let newName = newURL.lastPathComponent
+        do {
+            if fileExists(atPath: newURL.path){
+                try removeItem(at:newURL)
+            }
+            try moveItem(at: originalURL, to: newURL)
+        }
+        catch let error as NSError {
+            JVDebugger.shared.log(debugLevel: .Error, "Could not rename file from \(originalName) to \(newName):\n\(error)")
+        }
+        
+    }
+    
+    
     
 }

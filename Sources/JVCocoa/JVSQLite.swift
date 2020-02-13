@@ -77,7 +77,7 @@ public class JVSQLdbase{
     
     public func create<T:SQLRecordable>(record:T)->SQLRecordSet?{
         execute(statement: "INSERT INTO \(record.tableName) (\(record.names)) VALUES (\(record.placeholders))", data: record.values)
-        let  pk = sqlite3_last_insert_rowid(backend)
+        //        let  pk = sqlite3_last_insert_rowid(backend)
         let request = record
         return find(record: request, matchFields: request.primaryKeyNames)
     }
@@ -106,51 +106,48 @@ public class JVSQLdbase{
         if sqlite3_prepare_v2(backend, selectStatementString, -1, &selectStatement, nil) == SQLITE_OK {
             
             // Parse the result
-            sqlite3_step(selectStatement)
-            let rowCount:Int32 = sqlite3_data_count(selectStatement)
-            let columnCount:Int32 = sqlite3_column_count(selectStatement)
-            
-            if (rowCount > 0){
-                for rowNumber in 0...rowCount-1 {
+            while (sqlite3_step(selectStatement) == SQLITE_ROW) {
+                let columnCount:Int32 = sqlite3_column_count(selectStatement)
+                
+                var row:SQLRow = []
+                for zeroBasedColumnNumber in 0...columnCount-1 {
                     
-                    var row:SQLRow = []
-                    for zeroBasedColumnNumber in 0...columnCount-1 {
-                        
-                        let columnName: String = String(cString: sqlite3_column_name(selectStatement, zeroBasedColumnNumber))
-                        let columnType:Int32 = sqlite3_column_type(selectStatement, zeroBasedColumnNumber)
-                        var columnValue:Any? = nil
-                        
-                        if rowNumber == 0{
-                            header.append(columnName)
-                        }
-                        
-                        switch columnType{
-                        case SQLITE_INTEGER:
-                            columnValue = Int(sqlite3_column_int(selectStatement, zeroBasedColumnNumber))
-                        case SQLITE_FLOAT:
-                            columnValue = Double(sqlite3_column_double(selectStatement, zeroBasedColumnNumber))
-                        case SQLITE_TEXT:
-                            columnValue = String(cString: sqlite3_column_text(selectStatement, zeroBasedColumnNumber))
-                        case SQLITE_BLOB:
-                            let count = sqlite3_column_bytes(selectStatement, zeroBasedColumnNumber)
-                            if let bytes = sqlite3_column_blob(selectStatement, zeroBasedColumnNumber) {
-                                columnValue = Data(bytes: bytes, count: Int(count))
-                            }
-                            else {
-                                columnValue = nil
-                            }
-                        case SQLITE_NULL:
-                            columnValue = nil
-                        default:
-                            columnValue = nil
-                        }
-                        
-                        row.append(columnValue)
+                    let columnName: String = String(cString: sqlite3_column_name(selectStatement, zeroBasedColumnNumber))
+                    let columnType:Int32 = sqlite3_column_type(selectStatement, zeroBasedColumnNumber)
+                    var columnValue:Any? = nil
+                    
+                    // On first run also compose the header
+                    if rows.count == 0{
+                        header.append(columnName)
                     }
                     
-                    rows.append(row)
+                    switch columnType{
+                    case SQLITE_INTEGER:
+                        columnValue = Int(sqlite3_column_int(selectStatement, zeroBasedColumnNumber))
+                    case SQLITE_FLOAT:
+                        columnValue = Double(sqlite3_column_double(selectStatement, zeroBasedColumnNumber))
+                    case SQLITE_TEXT:
+                        columnValue = String(cString: sqlite3_column_text(selectStatement, zeroBasedColumnNumber))
+                    case SQLITE_BLOB:
+                        let count = sqlite3_column_bytes(selectStatement, zeroBasedColumnNumber)
+                        if let bytes = sqlite3_column_blob(selectStatement, zeroBasedColumnNumber) {
+                            columnValue = Data(bytes: bytes, count: Int(count))
+                        }
+                        else {
+                            columnValue = nil
+                        }
+                    case SQLITE_NULL:
+                        columnValue = nil
+                    default:
+                        columnValue = nil
+                    }
+                    
+                    row.append(columnValue)
                 }
+                
+                rows.append(row)
             }
+            
         } else{
             JVDebugger.shared.log(debugLevel: .Error,  "Statement '\(selectStatementString)' could not be prepared")
         }
@@ -166,7 +163,7 @@ public class JVSQLdbase{
     }
     
     public func execute(statement executeStatementString:String, data:[Any?]){
-                
+
         var executeStatement: SQLStatement? = nil
         if sqlite3_prepare_v2(backend, executeStatementString, -1, &executeStatement, nil) == SQLITE_OK {
             
