@@ -70,14 +70,14 @@ public extension String {
     func replace(matchPattern:String, replacementPattern:String, useRegex:Bool = false)->String{
         
         let searchOptions:String.CompareOptions = !useRegex ? [.caseInsensitive] :[.caseInsensitive, .regularExpression]
-
-           return replacingOccurrences(of: matchPattern,
-                                       with: replacementPattern,
-                                       options: searchOptions)
+        
+        return replacingOccurrences(of: matchPattern,
+                                    with: replacementPattern,
+                                    options: searchOptions)
     }
     
     func quote()->String{
-      return "\"\(self)\""
+        return "\"\(self)\""
     }
     
     func singleQuote()->String{

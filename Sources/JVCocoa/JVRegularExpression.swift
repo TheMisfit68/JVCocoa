@@ -17,7 +17,7 @@ extension NSRegularExpression{
     }
     
     //MARK: - Factory methods/convenience inits
-
+    
     convenience init?(pattern: String){
         try? self.init(pattern: pattern, options: [NSRegularExpression.Options.caseInsensitive])
     }
@@ -58,7 +58,7 @@ protocol RegularExpressionMatchable {
 
 extension String:RegularExpressionMatchable {
     
-   public func matchesExpression(pattern: String, options:NSRegularExpression.Options = [.caseInsensitive]) -> Bool {
+    public func matchesExpression(pattern: String, options:NSRegularExpression.Options = [.caseInsensitive]) -> Bool {
         if let regex = try? NSRegularExpression(pattern: pattern, options: options){
             return regex.numberOfMatches(in: self, range: NSMakeRange(0, self.count)) > 0
         }
@@ -67,9 +67,49 @@ extension String:RegularExpressionMatchable {
     
 }
 
-
 infix operator =~ : ComparisonPrecedence
 func =~<T: RegularExpressionMatchable> (left: T, right: String) -> Bool {
     return left.matchesExpression(pattern: right, options:[.caseInsensitive])
 }
 
+public extension String{
+    
+    /**
+     Returns a two-dimensional  array of regexMatches
+     each entry consists of the match (at index 0) followed by any captured groups/subexpressions
+     
+     - version: 1.0
+     
+     - Parameter withRegex : a RegEx pattern
+          
+     - Returns: [[String]]
+     
+     */
+    
+    func matchesAndGroups(withRegex pattern: String) -> [[String]] {
+        var results:[[String]] = []
+        
+        var regex: NSRegularExpression
+        do {
+            regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+        } catch {
+            return results
+        }
+        let matches = regex.matches(in: self, options: [], range: NSRange(location:0, length: self.count))
+        
+        results = matches.map{match in
+            
+            var expressions:[String] = []
+            let numberOfExpressions = match.numberOfRanges
+            
+            for i in 0...numberOfExpressions-1 {
+                let expressionRange = match.range(at: i)
+                let expression = (self as NSString).substring(with: expressionRange)
+                expressions.append(expression)
+            }
+            return expressions
+        }
+        return results
+    }
+    
+}
