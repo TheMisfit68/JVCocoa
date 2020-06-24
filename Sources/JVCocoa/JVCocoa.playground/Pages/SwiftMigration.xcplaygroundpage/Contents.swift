@@ -20,29 +20,29 @@ swap(&firstInt, &secondInt)
 firstInt
 secondInt
 
-// Test OCString
-let alphabetString = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-let leftSubstring = alphabetString.leftString(2)
-let rightSubstring = alphabetString.rightString(2)
-let aanwezig = alphabetString.containsSubstring("ABC")
-let length = alphabetString.characters.count
-let substring4 = alphabetString[1...4]
-let substring5 = alphabetString[0..<5]
-let substring6 = alphabetString[0...5]
+// Test JVString
+//let alphabetString = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+//let leftSubstring = alphabetString.leftString(2)
+//let rightSubstring = alphabetString.rightString(2)
+//let aanwezig = alphabetString.containsSubstring("ABC")
+//let length = alphabetString.characters.count
+//let substring4 = alphabetString[1...4]
+//let substring5 = alphabetString[0..<5]
+//let substring6 = alphabetString[0...5]
 
 
-// Test OCImage
-let originalImage = NSImage(named:"126-moon.png")!
-let newSize = NSSize(width:190, height:220)
-let scaledImage = originalImage.imageScaledToSize(newSize)
-scaledImage
+// Test JVImage
+//let originalImage = NSImage(named:"126-moon.png")!
+//let newSize = NSSize(width:190, height:220)
+//let scaledImage = originalImage.imageScaledToSize(newSize)
+//scaledImage
 
 
 
 // Test JVBool
-var myBool = false
-myBool.toggle()
-myBool.toggle(false)
+//var myBool = false
+//myBool.toggle()
+//myBool.toggle(false)
 
 // Test associative storage for extensions
 //var firstObject = NSObject()

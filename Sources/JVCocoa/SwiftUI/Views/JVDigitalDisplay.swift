@@ -33,12 +33,7 @@ public struct DigitalDisplayView:View{
     
 }
 
-//@available(OSX 10.15, *)
-//struct DigitalDisplayView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        DigitalDisplayView()
-//    }
-//}
+// MARK: - Subviews/Components
 
 @available(OSX 10.15, *)
 public struct Bezel:View{
@@ -90,11 +85,34 @@ public struct BackgroundLight:View{
     
 }
 
+
+// MARK: - Attached Model
 @available(OSX 10.15, *)
 open class DigitalDisplayModel: ObservableObject {
-    @Published open var textLines:[String] = []
+    @Published open var textLines:[String] = ["0123456789"]
     @Published open var backLightOn:Bool = true
     
     public init(){}
 }
 
+
+
+// MARK: - Preview
+@available(OSX 10.15.0, *)
+struct JVDigitalDisplay_Previews: PreviewProvider {
+    static var previews: some View {
+        DigitalDisplayView(model: DigitalDisplayModel())
+    }
+}
+
+// MARK: - Add this view to the XCode-library for reuse
+@available(OSX 10.16, *)
+struct LibraryContent: LibraryContentProvider {
+    @LibraryContentBuilder
+    var views: [LibraryItem] {
+        LibraryItem(
+            DigitalDisplayView(model: DigitalDisplayModel()),
+            category: .control
+        )
+    }
+}
