@@ -9,6 +9,7 @@
 import Foundation
 
 public extension Bool {
+    
     mutating func toggle(enable:Bool = true){
         self = (self ^^ enable)
     }

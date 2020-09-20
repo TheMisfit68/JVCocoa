@@ -106,13 +106,13 @@ struct JVDigitalDisplay_Previews: PreviewProvider {
 }
 
 // MARK: - Add this view to the XCode-library for reuse
-@available(OSX 10.16, *)
-struct LibraryContent: LibraryContentProvider {
-    @LibraryContentBuilder
-    var views: [LibraryItem] {
-        LibraryItem(
-            DigitalDisplayView(model: DigitalDisplayModel()),
-            category: .control
-        )
-    }
-}
+//@available(OSX 10.16, *)
+//struct LibraryContent: LibraryContentProvider {
+//    @LibraryContentBuilder
+//    var views: [LibraryItem] {
+//        LibraryItem(
+//            DigitalDisplayView(model: DigitalDisplayModel()),
+//            category: .control
+//        )
+//    }
+//}
