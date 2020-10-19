@@ -18,9 +18,9 @@ public class RestAPI<E:StringRepresentableEnum, P:StringRepresentableEnum>{
         case DELETE
     }
     
-    var baseURL:String
-    var endpointParameters:[E:[P]]
-    var baseParameters:[P:String]
+    public var baseURL:String
+    public var endpointParameters:[E:[P]]
+    public var baseParameters:[P:String]
     
     
     public init(baseURL:String, endpointParameters:[E:[P]], baseParameters:[P:String] = [:]){
@@ -52,7 +52,7 @@ public class RestAPI<E:StringRepresentableEnum, P:StringRepresentableEnum>{
     
 }
 
-struct HTTPForm<P:StringRepresentableEnum>{
+public struct HTTPForm<P:StringRepresentableEnum>{
     
     var parametersToInclude:[P]
     public var currentParameters:[P:String]
