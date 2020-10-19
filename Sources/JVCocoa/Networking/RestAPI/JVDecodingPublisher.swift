@@ -1,6 +1,6 @@
 //
 //  Decoding Publisher.swift
-//  
+//
 //
 //  Created by Jan Verrept on 13/04/2020.
 //
@@ -18,12 +18,15 @@ class DecodingPublisher{
         
         return URLSession.shared
             .dataTaskPublisher(for: request)
+            .tryCatch({error -> URLSession.DataTaskPublisher in
+                sleep(retryDelay)
+                return URLSession.shared.dataTaskPublisher(for: request)
+            })
             .retry(maxRetries)
-            .map { data, _ in data}
+            .tryMap{ data, _ in data}
             .decode(type: T.self, decoder: decoder)
-            .retry(maxRetries)
             .subscribe(on: DispatchQueue.global())
             .eraseToAnyPublisher() // Make more generic
     }
-    
 }
+

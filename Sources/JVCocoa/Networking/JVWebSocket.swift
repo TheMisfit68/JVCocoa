@@ -20,21 +20,34 @@ public class WebSocket:NSObject, URLSessionWebSocketDelegate {
     
     var urlSession:URLSession!
     var webSocketTask:URLSessionWebSocketTask!
-    var delegate:WebSocketDelegate?
+    var webSocketDelegate:WebSocketDelegate?
     
     public init(urlRequest:URLRequest, delegate:WebSocketDelegate?){
         super.init()
+        
         urlSession = URLSession(configuration: .default, delegate: self, delegateQueue: OperationQueue())
+        
         webSocketTask = urlSession.webSocketTask(with:urlRequest)
-        self.delegate = delegate
+        self.webSocketDelegate = delegate
     }
     
     public func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
-        self.delegate?.connected()
+        self.webSocketDelegate?.connected()
     }
     
     public func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        self.delegate?.disconnected(error:nil)
+        self.webSocketDelegate?.disconnected(error:nil)
+    }
+
+    public func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        
+        // Pass test server with self signed certificate
+        if challenge.protectionSpace.host == "192.168.0.50" {
+            completionHandler(.useCredential, URLCredential(trust: challenge.protectionSpace.serverTrust!))
+        } else {
+            completionHandler(.performDefaultHandling, nil)
+        }
+        
     }
     
     public func connect() {
@@ -43,7 +56,7 @@ public class WebSocket:NSObject, URLSessionWebSocketDelegate {
     }
     
     public func disconnect() {
-        webSocketTask.cancel(with: .normalClosure, reason: nil)
+        webSocketTask.cancel(with: .goingAway, reason: nil)
     }
     
     
@@ -51,7 +64,7 @@ public class WebSocket:NSObject, URLSessionWebSocketDelegate {
         let message:URLSessionWebSocketTask.Message = .string(text)
         webSocketTask.send(message) { error in
             if let error = error {
-                self.delegate?.received(error: error)
+                self.webSocketDelegate?.received(error: error)
             }
         }
     }
@@ -60,12 +73,18 @@ public class WebSocket:NSObject, URLSessionWebSocketDelegate {
         let message:URLSessionWebSocketTask.Message = .data(data)
         webSocketTask.send(message) { error in
             if let error = error {
-                self.delegate?.received(error: error)
+                self.webSocketDelegate?.received(error: error)
             }
         }
     }
     
-    //TODO: - Implement Ping and Pong methods
+    public func ping() {
+        webSocketTask.sendPing { error in
+            if let error = error {
+                self.webSocketDelegate?.received(error: error)
+            }
+        }
+    }
     
     private func listen()  {
         
@@ -76,15 +95,16 @@ public class WebSocket:NSObject, URLSessionWebSocketDelegate {
                 
                 switch message {
                 case .string(let text):
-                    self.delegate?.received(text: text)
+                    self.webSocketDelegate?.received(text: text)
                 case .data(let data):
-                    self.delegate?.received(data: data)
+                    self.webSocketDelegate?.received(data: data)
                 @unknown default:
-                    break
+                    fatalError()
                 }
+                self.listen()
                 
             case .failure(let error):
-                self.delegate?.received(error: error)
+                self.webSocketDelegate?.received(error: error)
                 
             }
         }

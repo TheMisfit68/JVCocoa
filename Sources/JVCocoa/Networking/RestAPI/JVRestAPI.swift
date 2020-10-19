@@ -1,5 +1,5 @@
 //
-//  RestAPI.swift
+//  JVRestAPI.swift
 //
 //
 //  Created by Jan Verrept on 18/04/2020.
@@ -8,7 +8,6 @@
 import Foundation
 import Combine
 
-//TODO: - Add this Class to JVCocoa
 @available(OSX 10.15, *)
 public class RestAPI<E:StringRepresentableEnum, P:StringRepresentableEnum>{
     

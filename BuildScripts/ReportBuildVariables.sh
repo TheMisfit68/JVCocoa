@@ -17,3 +17,4 @@ echo "BUILT_PRODUCTS_DIR = ${BUILT_PRODUCTS_DIR}"
 echo "CONFIGURATION_BUILD_DIR = ${CONFIGURATION_BUILD_DIR}"
 echo "DSTROOT = ${DSTROOT}"
 echo "＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿"
+
