@@ -31,36 +31,63 @@ public class RestAPI<E:StringRepresentableEnum, P:StringRepresentableEnum>{
         
     }
     
-    public func publish<T:Decodable>(command:E, parameters:[P:String], maxRetries:Int = 2, retryDelay:UInt32 = 2)->AnyPublisher<T?, Error>{
+    public func publish<T:Decodable>(method:RESTmethod = .GET,command:E, parameters:[P:String], maxRetries:Int = 2, retryDelay:UInt32 = 2)->AnyPublisher<T?, Error>{
         
-        let url = URL(string:baseURL+command.stringValue)
-        var request = URLRequest(url: url!)
-        request.httpMethod = RESTmethod.POST.rawValue
-        request.allHTTPHeaderFields = ["Content-Type" : "application/x-www-form-urlencoded"]
+        var url:URL?
+        var request:URLRequest! = nil
         let parameters = baseParameters.merging(parameters) {$1}
         let form = HTTPForm(parametersToInclude: endpointParameters[command] ?? [], currentParameters: parameters)
-        let body = form.composeBody(type: .Form)
-        request.httpBody = body
+        
         print()
-        print("🔃 Publishing \(command.rawValue)")
-        if let printableBody = form.composeBody(type: .Custom(seperator: "\n")), let bodyDescription = String(data:printableBody,encoding: .utf8){
-            print(bodyDescription)
-            print()
+        print("🔃 Publishing \(baseURL)\(command.rawValue) [\(method.rawValue)]")
+        print(form.description)
+        print()
+        
+        switch method {
+        case .GET:
+            url = URL(string:baseURL+command.stringValue+"?"+form.parametersString)
+            request = URLRequest(url: url!)
+        case .POST:
+            url = URL(string:baseURL+command.stringValue)
+            request = URLRequest(url: url!)
+            request.allHTTPHeaderFields = ["Content-Type" : "application/x-www-form-urlencoded"]
+            request.httpBody = form.composeBody(type: .FormEncoded)
+        default:
+            print("⚠️ JVRestAPI: Unhandled REST-method")
         }
-        return DecodingPublisher.Publisher(from: request, maxRetries: maxRetries, retryDelay:retryDelay)
+        request.httpMethod = method.rawValue
+        return DecodingPublisher.Publisher(from: request, retryDelay:retryDelay, maxRetries: maxRetries)
+        
     }
     
 }
 
 public struct HTTPForm<P:StringRepresentableEnum>{
     
-    var parametersToInclude:[P]
+    public var parametersToInclude:[P]
     public var currentParameters:[P:String]
+    public var parametersString:String{
+        parametersAndValues.joined(separator: "&")
+    }
+    public var description:String{
+        parametersAndValues.joined(separator: "\n")
+    }
+    
+    private var filteredParameters:[P:String]
+    private var stringRepresentations:[(String, String)]
+    private var parametersAndValues:[String]
     
     public enum HTTPbodyType{
         case Json
-        case Form
-        case Custom(seperator:String)
+        case FormEncoded
+    }
+    
+    public init(parametersToInclude:[P], currentParameters:[P:String]){
+        self.parametersToInclude = parametersToInclude
+        self.currentParameters = currentParameters
+        self.filteredParameters = currentParameters.filter   {(parameterName, parameterValue) in parametersToInclude.contains(parameterName)}
+        self.stringRepresentations = filteredParameters.map  {(parameterName, parameterValue) in (parameterName.stringValue, parameterValue)}
+        self.parametersAndValues = stringRepresentations.map {parameterName, parameterValue in  "\(parameterName)=\(parameterValue)" }
     }
     
     public static func Encode(_ parameter:String)->String{
@@ -73,22 +100,14 @@ public struct HTTPForm<P:StringRepresentableEnum>{
         return encodedParameter
     }
     
+    
     public func composeBody(type:HTTPbodyType = .Json)->Data?{
-        
-        let  filteredParameters = currentParameters.filter { (parameterName, parameterValue) in parametersToInclude.contains(parameterName)}
-        let  stringRepresentations = filteredParameters.map {(parameterName, parameterValue) in (parameterName.stringValue, parameterValue)}
         
         switch type {
         case .Json:
             return try? JSONSerialization.data(withJSONObject: stringRepresentations, options: .prettyPrinted)
-        case .Form:
-            let parametersAndValues = stringRepresentations.map {parameterName, parameterValue in return "\(parameterName)=\(parameterValue)" }
-            let paramaterString = parametersAndValues.joined(separator: "&")
-            return paramaterString.data(using: .utf8)
-        case .Custom(let seperator):
-            let parametersAndValues = stringRepresentations.map {parameterName, parameterValue in "\(parameterName)=\(parameterValue)" }
-            let paramaterString = parametersAndValues.joined(separator: seperator)
-            return paramaterString.data(using: .utf8)
+        case .FormEncoded:
+            return parametersString.data(using: .utf8)
         }
         
     }

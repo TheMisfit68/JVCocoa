@@ -5,8 +5,6 @@
 //  Created by Jan Verrept on 13/04/2020.
 //
 
-//TODO: - Add this Class to JVCocoa
-
 import Foundation
 import Combine
 
@@ -14,19 +12,16 @@ import Combine
 class DecodingPublisher{
     
     // Publisher to decode received Json-String to a model object (that conforms to decodable)
-    class func Publisher<T: Decodable>(from request:URLRequest, using decoder:JSONDecoder = JSONDecoder(), maxRetries:Int = 2, retryDelay:UInt32 = 2) -> AnyPublisher<T, Error> {
+    class func Publisher<T: Decodable>(from request:URLRequest, using decoder:JSONDecoder = newJSONDecoder(), retryDelay:UInt32 = 2, maxRetries:Int = 2) -> AnyPublisher<T, Error> {
         
-        return URLSession.shared
-            .dataTaskPublisher(for: request)
-            .tryCatch({error -> URLSession.DataTaskPublisher in
-                sleep(retryDelay)
-                return URLSession.shared.dataTaskPublisher(for: request)
-            })
+        let intitialPublisher =  URLSession.shared.dataTaskPublisher(for: request).share()
+        return intitialPublisher
+            .catch {_ in intitialPublisher.delay(for: 3, scheduler: DispatchQueue.main)}
             .retry(maxRetries)
-            .tryMap{ data, _ in data}
+            .tryMap{ data, response in print(data.description); print(response);return data}
             .decode(type: T.self, decoder: decoder)
             .subscribe(on: DispatchQueue.global())
-            .eraseToAnyPublisher() // Make more generic
+            .eraseToAnyPublisher() // Make the publisher more generic, for use downstream
     }
 }
 

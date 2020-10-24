@@ -42,6 +42,7 @@ public class WebSocket:NSObject, URLSessionWebSocketDelegate {
     public func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         
         // Pass test server with self signed certificate
+        //TODO: - check why this IPadress was  hard coded inhere!
         if challenge.protectionSpace.host == "192.168.0.50" {
             completionHandler(.useCredential, URLCredential(trust: challenge.protectionSpace.serverTrust!))
         } else {
