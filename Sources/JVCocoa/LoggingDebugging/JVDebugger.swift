@@ -118,7 +118,7 @@ public class Debugger: Singleton {
     public func log(debugLevel:DebugLevel = .Native(logType: OSLogType.default), _ items:Any..., seperator:String = " "){
         
         var icon:String = ""
-        var message = items.map{String(describing:$0)}.joined(separator: seperator)
+        let message = items.map{String(describing:$0)}.joined(separator: seperator)
         
         switch debugLevel {
         case .Critical:

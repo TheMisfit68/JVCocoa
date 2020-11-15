@@ -5,17 +5,19 @@
 //  Created by Jan Verrept on 26/12/2019.
 //
 import Foundation
+import os.log
 
+@available(OSX 11.0, *)
 public extension FileManager{
     
     func checkForDirectory(_ directoryURL:URL, createIfNeeded:Bool = false){
-        JVDebugger.shared.log(debugLevel: .Message, "Checking for folder at \(directoryURL.path)")
+        Debugger.shared.log(debugLevel: .Message, "Checking for folder at \(directoryURL.path)")
         var isFolder:ObjCBool = false
         let supportFolderExists = FileManager.default.fileExists(atPath: directoryURL.path, isDirectory: &isFolder) && isFolder.boolValue
         if !supportFolderExists && createIfNeeded{
             do {
                 try FileManager.default.createDirectory(atPath: directoryURL.path, withIntermediateDirectories: true, attributes: nil)
-                JVDebugger.shared.log(debugLevel: .Succes, "Created folder")
+                Debugger.shared.log(debugLevel: .Succes, "Created folder")
             } catch {
                 //TODO: - finish errorHandling
             }
@@ -32,7 +34,7 @@ public extension FileManager{
             try moveItem(at: originalURL, to: newURL)
         }
         catch let error as NSError {
-            JVDebugger.shared.log(debugLevel: .Error, "Could not rename file from \(originalName) to \(newName):\n\(error)")
+            Debugger.shared.log(debugLevel: .Native(logType: OSLogType.error), "Could not rename file from \(originalName) to \(newName):\n\(error)")
         }
         
     }
