@@ -163,7 +163,7 @@ public class JVSQLdbase{
     }
     
     public func execute(statement executeStatementString:String, data:[Any?]){
-
+        
         var executeStatement: SQLStatement? = nil
         if sqlite3_prepare_v2(backend, executeStatementString, -1, &executeStatement, nil) == SQLITE_OK {
             
@@ -204,8 +204,54 @@ public class JVSQLdbase{
         
         sqlite3_finalize(executeStatement)
     }
+    
+    
+    public func autoCreateSqlTables<T>(forTypes recordTypes:[T]){
+        
+        recordTypes.forEach{ recordType in
+            
+            let tableName = String(describing: recordType)
+            let existingTables:SQLRecordSet? = select(statement:"SELECT name FROM sqlite_master WHERE type='table' AND name='\(tableName)'")
+            
+            if existingTables == nil{
+                
+                let typeProperties = propertyInfo(of: recordType)
+                var fieldDefinitions:[String] = []
+                
+                for case let (name?, value) in typeProperties {
+                    let fieldName:String = name
+                    var fieldType:String = "INTEGER"
+                    
+                    switch value{
+                    case is Int, is UInt, is UInt32:
+                        fieldType = "INTEGER"
+                    case is Float, is Double:
+                        fieldType = "REAL"
+                    case is String:
+                        fieldType = "TEXT"
+                    case is Data:
+                        fieldType = "BLOB"
+                    default:
+                        let keyStyle = Mirror(reflecting: value).displayStyle
+                        let isToOneRelationShip = (keyStyle == .struct) || (keyStyle == .class)
+                        let isToManyRelationShip = (keyStyle == .collection)
+                        
+                        JVDebugger.shared.log(debugLevel: .Error,  "SQL-fields of type \(typeName(of: value)) couldn't be created")
+                        break
+                    }
+                    
+                    fieldDefinitions.append("\(fieldName) \(fieldType)")
+                }
+                
+                let executeStatementString = "CREATE TABLE \(tableName)( \(fieldDefinitions.joined(separator: ",")) )"
+                
+                execute(statement:executeStatementString, data:[])
+            }
+        }
+    }
+    
+    
 }
-
 
 // MARK: - SQLRecordable protocol
 public protocol SQLRecordable: SQLExpressable {
@@ -265,27 +311,27 @@ public extension SQLExpressable{
     }
     
     var names: String{
-        let propertiesIntrospection = Mirror(reflecting: self).children
+        let propertiesIntrospection = propertyInfo(of: self)
         return propertiesIntrospection.compactMap( {shouldBeIncluded($0) ? $0.label! : nil} ).joined(separator: ",")
     }
     
     var placeholders: String{
-        let propertiesIntrospection = Mirror(reflecting: self).children
+        let propertiesIntrospection = propertyInfo(of: self)
         return propertiesIntrospection.compactMap( {shouldBeIncluded($0) ? "?" : nil} ).joined(separator: ",")
     }
     
     var pairs: String{
-        let propertiesIntrospection = Mirror(reflecting: self).children
+        let propertiesIntrospection = propertyInfo(of: self)
         return propertiesIntrospection.compactMap( {shouldBeIncluded($0) ? "\($0.label!)=?" : nil} ).joined(separator: ",")
     }
     
     var values: [Any]{
-        let propertiesIntrospection = Mirror(reflecting: self).children
+        let propertiesIntrospection = propertyInfo(of: self)
         return propertiesIntrospection.compactMap( {shouldBeIncluded($0) ? unwrap(any:$0.value) : nil} ) // Try to downcast the Any-property (that might hide an optional) to a string
     }
     
     var matchConditions:String{
-        let propertiesIntrospection = Mirror(reflecting: self).children
+        let propertiesIntrospection = propertyInfo(of: self)
         return propertiesIntrospection.compactMap( {
             var matchCondition:String? = nil
             if shouldGetMatchedAgainst($0) {

@@ -8,24 +8,8 @@
 
 import Foundation
 
+// MARK: - Process Substrings
 public extension String {
-    
-    func indexForChar(offsetFromZero:Int)->String.Index{
-        return index(startIndex, offsetBy:offsetFromZero)
-    }
-    
-    var firstIndex:String.Index{
-        return startIndex
-    }
-    
-    var lastIndex:String.Index{
-        
-        if !isEmpty{
-            return index(before:endIndex)
-        }
-        return startIndex
-        
-    }
     
     // Subscript that works with a range of Ints instead of a range of Indeces
     // String subscripts are zero-based
@@ -62,6 +46,23 @@ public extension String {
         return String(suffix(numberOfchars)) // Return a String from the found Substring
     }
     
+    func indexForChar(offsetFromZero:Int)->String.Index{
+        return index(startIndex, offsetBy:offsetFromZero)
+    }
+    
+    var firstIndex:String.Index{
+        return startIndex
+    }
+    
+    var lastIndex:String.Index{
+        
+        if !isEmpty{
+            return index(before:endIndex)
+        }
+        return startIndex
+        
+    }
+    
     func containsSubstring(_ subString: String)->Bool{
         // Compare case insensitive by making the String and Substring lowercase
         return lowercased().range(of:subString.lowercased()) != nil
@@ -76,6 +77,37 @@ public extension String {
                                     options: searchOptions)
     }
     
+}
+
+// MARK: - Changing textcases
+extension String {
+    
+    var camelCased: String {
+        guard !isEmpty else {
+            return ""
+        }
+
+        let parts = self.components(separatedBy: CharacterSet.alphanumerics.inverted)
+
+        let first = String(describing: parts.first!).lowercasedFirst
+        let rest = parts.dropFirst().map({String($0).uppercasedFirst})
+
+        return ([first] + rest).joined(separator: "")
+    }
+    
+    var uppercasedFirst: String {
+        return prefix(1).uppercased() + dropFirst()
+    }
+
+    var lowercasedFirst: String {
+        return prefix(1).lowercased() + dropFirst()
+    }
+
+}
+
+// MARK: - Handling quotes
+extension String{
+    
     func quote()->String{
         return "\"\(self)\""
     }
@@ -87,5 +119,6 @@ public extension String {
     func unquote()->String{
         return replace(matchPattern: "^\"(.*)\"$", replacementPattern: "$1", useRegex: true)
     }
-    
 }
+
+
