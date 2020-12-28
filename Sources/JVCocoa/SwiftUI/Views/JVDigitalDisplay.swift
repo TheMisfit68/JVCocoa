@@ -9,110 +9,131 @@ import Foundation
 import SwiftUI
 import Combine
 
-@available(OSX 10.15, *)
 public struct DigitalDisplayView:View{
-    @ObservedObject public var model:DigitalDisplayModel
-    @State private var linesToDisplay:[String] = []
+    let linesToDisplay:[String]
+    let backLightOn:Bool
+    let color:Color
     
-    public init(model:DigitalDisplayModel){
-        self.model = model
+    // Memberwise initialiser would be Internal by default,
+    // provide a pulic one for use outside of this module
+    public init(linesToDisplay:[String], backLightOn:Bool, color:Color){
+        self.linesToDisplay = linesToDisplay
+        self.backLightOn = backLightOn
+        self.color = color
     }
-    
-    let timer = Timer.publish(every: 5, on: .main, in: .common).autoconnect()
     
     public var body: some View {
         ZStack{
-            BackgroundLight(backLightOn: $model.backLightOn)
+            BackgroundLight(color: color, backLightOn: backLightOn)
             LCD(lines:linesToDisplay)
             Glass()
             Bezel()
-        }.onReceive(timer) { _ in
-            self.linesToDisplay = self.model.textLines
-        }
+        }.padding()
     }
-    
 }
+
 
 // MARK: - Subviews/Components
-
-@available(OSX 10.15, *)
-public struct Bezel:View{
-    public var body: some View {
-        RoundedRectangle(cornerRadius: 20,style: .continuous).strokeBorder(Color(#colorLiteral(red: 0.8039215803, green: 0.8039215803, blue: 0.8039215803, alpha: 1)), lineWidth: 10)
-    }
-}
-
-@available(OSX 10.15, *)
-public struct Glass:View{
+extension DigitalDisplayView{
     
-    public var body: some View {
-        Path { path in
-            path.move(to: CGPoint(x: 300, y: 110))
-            path.addArc(center: .init(x: 300, y: 110), radius: 120, startAngle: Angle(degrees: 180.0), endAngle: Angle(degrees: 360.0), clockwise: false)
-        }.brightness(0.2).opacity(0.1).clipped()
-    }
-}
-
-@available(OSX 10.15, *)
-public struct LCD:View{
-    var lines: [String]
-    public var body: some View {
-        VStack{
-            ForEach(lines, id: \.self) { line in
-                HStack{
-                    Text(line).font(.custom("Technology", size: 24)).italic().foregroundColor(Color(#colorLiteral(red: 0.2549019754, green: 0.2745098174, blue: 0.3019607961, alpha: 1))).padding(5)
-                    Spacer()
-                }
-            }
-            }.padding(10).multilineTextAlignment(.leading).shadow(radius: 10)
-    }
-}
-
-
-@available(OSX 10.15, *)
-public struct BackgroundLight:View{
-    @Binding var backLightOn:Bool
-    public var body: some View {
-        let backLightColors:Gradient
-        if backLightOn{
-            backLightColors = Gradient(colors: [Color(#colorLiteral(red: 0.4793787132, green: 0.6737758619, blue: 0.1756879404, alpha: 1)),Color(#colorLiteral(red: 0.3411764801, green: 0.6235294342, blue: 0.1686274558, alpha: 1)),Color(#colorLiteral(red: 0.2997378409, green: 0.5897147059, blue: 0.1139934883, alpha: 1)),Color(#colorLiteral(red: 0.2531218827, green: 0.5225499868, blue: 0.07702929527, alpha: 1))])
-        }else{
-            backLightColors = Gradient(colors: [Color(#colorLiteral(red: 0.501960814, green: 0.501960814, blue: 0.501960814, alpha: 1)),Color(#colorLiteral(red: 0.6000000238, green: 0.6000000238, blue: 0.6000000238, alpha: 1)),Color(#colorLiteral(red: 0.6000000238, green: 0.6000000238, blue: 0.6000000238, alpha: 1)),Color(#colorLiteral(red: 0.501960814, green: 0.501960814, blue: 0.501960814, alpha: 1))])
+    struct Bezel:View{
+        public var body: some View {
+            RoundedRectangle(cornerRadius: 20,style: .continuous).strokeBorder(Color(#colorLiteral(red: 0.8039215803, green: 0.8039215803, blue: 0.8039215803, alpha: 1)), lineWidth: 10)
         }
-        let backGroundLight = LinearGradient(gradient: backLightColors, startPoint: .top, endPoint: .bottom)
-        return RoundedRectangle(cornerRadius: 20,style: .continuous).fill(backGroundLight).frame(width: nil, height: 120, alignment: .center)
     }
     
-}
-
-
-// MARK: - Attached Model
-@available(OSX 10.15, *)
-open class DigitalDisplayModel: ObservableObject {
-    @Published open var textLines:[String] = ["0123456789"]
-    @Published open var backLightOn:Bool = true
+    struct Glass:View{
+        
+        public var body: some View {
+            GeometryReader { geometry in
+                Path { path in
+                    path.addArc(center: .init(x: geometry.size.width, y: geometry.size.height), radius: geometry.size.height*1.2, startAngle: Angle(degrees: 180.0), endAngle: Angle(degrees:90.0), clockwise: false)
+                }.brightness(0.2)
+                .opacity(0.1)
+                .clipped()
+            }
+        }
+    }
     
-    public init(){}
+    struct LCD:View{
+        var lines: [String]
+        public var body: some View {
+            GeometryReader { geometry in
+                VStack{
+                    ForEach(lines, id: \.self) { line in
+                        HStack{
+                            
+                            Text(line)
+                                .font(.custom("Technology", size:(geometry.size.height-20)/CGFloat(max( 1,lines.count))))
+                                .italic()
+                                .foregroundColor(Color(#colorLiteral(red: 0.2549019754, green: 0.2745098174, blue: 0.3019607961, alpha: 1)))
+                                .shadow(radius: 10)
+                            
+                            Spacer()
+                        }
+                    }
+                }.padding(10)
+            }
+        }
+    }
+    
+    
+    struct BackgroundLight:View{
+        var color:Color
+        var backLightOn:Bool
+        
+        public var body: some View {
+            
+            let darkColor:Color = color //Color(NSColor(color).darker(amount: 0.5))
+            var gradientBaseColor:Color
+            var gradientColors: [Color] = []
+            
+            if !backLightOn{
+                gradientBaseColor = darkColor
+            }else{
+                gradientBaseColor = color
+            }
+            
+            gradientColors.append(gradientBaseColor)
+            gradientColors.append(Color(NSColor(gradientBaseColor).lighter(amount: 0.25)))
+            gradientColors.append(gradientBaseColor)
+            gradientColors.append(Color(NSColor(gradientBaseColor).darker(amount: 0.25)))
+            
+            let gradient = Gradient(colors: gradientColors)
+            let backGroundLight = LinearGradient(gradient: gradient, startPoint: .top, endPoint: .bottom)
+            return RoundedRectangle(cornerRadius: 20,style: .continuous).fill(backGroundLight)
+        }
+        
+    }
 }
 
-
-
-// MARK: - Preview
-@available(OSX 10.15.0, *)
+// MARK: - Previews
 struct JVDigitalDisplay_Previews: PreviewProvider {
     static var previews: some View {
-        DigitalDisplayView(model: DigitalDisplayModel())
+        
+        Group {
+            DigitalDisplayView(linesToDisplay: ["0123456789", "LightScheme"], backLightOn: true, color: Color(#colorLiteral(red: 0.1764705926, green: 0.4980392158, blue: 0.7568627596, alpha: 1)))
+                .frame(width: 400, height: 200, alignment: .center)
+                .environment(\.colorScheme, .light)
+            
+            DigitalDisplayView(linesToDisplay: ["0123456789", "DarkScheme"], backLightOn: true, color: Color(#colorLiteral(red: 0.1764705926, green: 0.4980392158, blue: 0.7568627596, alpha: 1)))
+                .frame(width: 400, height: 200, alignment: .center)
+                .environment(\.colorScheme, .dark)
+            
+        }
+    }
+    
+}
+
+
+// MARK: - Add this view to the XCode-library for reuse
+struct LibraryContent: LibraryContentProvider {
+    @LibraryContentBuilder
+    var views: [LibraryItem] {
+        LibraryItem(
+            DigitalDisplayView(linesToDisplay: ["0123456789", "ABCDEFGHIJ"], backLightOn: true, color: Color(#colorLiteral(red: 0.1764705926, green: 0.4980392158, blue: 0.7568627596, alpha: 1))),
+            category: .control
+        )
     }
 }
 
-// MARK: - Add this view to the XCode-library for reuse
-//@available(OSX 10.16, *)
-//struct LibraryContent: LibraryContentProvider {
-//    @LibraryContentBuilder
-//    var views: [LibraryItem] {
-//        LibraryItem(
-//            DigitalDisplayView(model: DigitalDisplayModel()),
-//            category: .control
-//        )
-//    }
-//}

@@ -17,6 +17,8 @@ Singleton Calculator class
 public class JVCalculator: Singleton {
     
     public static let shared:JVCalculator =  JVCalculator()
+    private init(){}
+
     public let π = Double.pi
     
     public func radiansToDegrees(radians: Double) -> Double{

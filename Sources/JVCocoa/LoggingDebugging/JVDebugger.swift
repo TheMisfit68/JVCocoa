@@ -13,13 +13,14 @@ import os.log
  Singleton Debugger class
  */
 @available(OSX 10.16, *)
-public class Debugger: Singleton {
+public class Debugger: Singleton {    
     
     public static let shared:Debugger = Debugger()
+    private init(){}
     
     // Apples Logger is available as of OS 11 (Big Sur) as a Struct
     // so it can't be subclassed only extended or embbeded as in this case
-    var logger:Logger! = nil
+    private var logger:Logger! = nil
     
     /*
      Some variables for convinience:
@@ -49,7 +50,7 @@ public class Debugger: Singleton {
     public func logThisMethod<T:Any>(
         
         type:T,
-        _ debugLevel:DebugLevel = .Native(logType: OSLogType.default),
+        _ debugLevel:DebugLevel = .Native(logType:.default),
         _ function: String = #function,
         _ file: String = #file,
         _ line: Int = #line){
@@ -72,8 +73,8 @@ public class Debugger: Singleton {
         }
         
         
-        log(debugLevel: .Native(logType: OSLogType.debug) , "\(functionString)(\(fileString)line \(line) :")
-        log(debugLevel: .Native(logType: OSLogType.debug), type)
+        log(debugLevel: .Native(logType:.debug) , "\(functionString)(\(fileString)line \(line) :")
+        log(debugLevel: .Native(logType:.debug), type)
         
         #endif
         
@@ -82,7 +83,7 @@ public class Debugger: Singleton {
     public func logThisMethod<T:AnyObject>(
         
         object:T,
-        _ debugLevel:DebugLevel = .Native(logType: OSLogType.default),
+        _ debugLevel:DebugLevel = .Native(logType:.default),
         _ function: String = #function,
         _ file: String = #file,
         _ line: Int = #line){
@@ -108,14 +109,16 @@ public class Debugger: Singleton {
         }
         
         
-        log(debugLevel: .Native(logType: OSLogType.debug) , "\(classOfObject)\(functionString)(\(fileString)line \(line) :")
-        log(debugLevel: .Native(logType: OSLogType.debug), object)
+        log(debugLevel: .Native(logType:.debug) , "\(classOfObject)\(functionString)(\(fileString)line \(line) :")
+        log(debugLevel: .Native(logType:.debug), object)
         
         #endif
         
     }
     
-    public func log(debugLevel:DebugLevel = .Native(logType: OSLogType.default), _ items:Any..., seperator:String = " "){
+    public func log(debugLevel:DebugLevel = .Native(logType:.default), _ items:Any..., seperator:String = " "){
+        
+        logger = Logger(subsystem: Debugger.AppIdentifier, category: "JVDebugger")
         
         var icon:String = ""
         let message = items.map{String(describing:$0)}.joined(separator: seperator)

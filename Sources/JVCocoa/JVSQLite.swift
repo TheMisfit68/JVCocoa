@@ -1,5 +1,5 @@
 //
-//  JVSQL.swift
+//  JVSQLite.swift
 //
 //
 //  Created by Jan Verrept on 10/12/2019.
@@ -7,6 +7,7 @@
 
 import Foundation
 import SQLite3
+import os.log
 
 public typealias SQLID = Int
 public typealias SQLBackend = OpaquePointer
@@ -30,12 +31,13 @@ public struct SQLRecordSet{
 
 // MARK: - SQLDatabase
 
-public class JVSQLdbase{
+
+public class SQLdatabase{
     
     var backend: SQLBackend?
     
-    public class func Open(file:String)->JVSQLdbase{
-        return JVSQLdbase(file: file)
+    public class func Open(file:String)->SQLdatabase{
+        return SQLdatabase(file: file)
     }
     
     init(file:String){
@@ -96,7 +98,7 @@ public class JVSQLdbase{
     
     public func select(statement selectStatementString:String)->SQLRecordSet?{
         
-        JVDebugger.shared.log(debugLevel: .Info, selectStatementString)
+        Debugger.shared.log(debugLevel: .Native(logType:.info), selectStatementString)
         
         var header:[String] = []
         var rows:[SQLRow] = []
@@ -149,7 +151,7 @@ public class JVSQLdbase{
             }
             
         } else{
-            JVDebugger.shared.log(debugLevel: .Error,  "Statement '\(selectStatementString)' could not be prepared")
+            Debugger.shared.log(debugLevel: .Native(logType:.error),  "Statement '\(selectStatementString)' could not be prepared")
         }
         
         sqlite3_finalize(selectStatement)
@@ -169,89 +171,145 @@ public class JVSQLdbase{
             
             // Parse the Data
             let valueCount:Int = data.count
-            
-            for valueNumber in 0...valueCount-1 {
-                let oneBasedColumNumber = Int32(valueNumber+1) // COLUMS FOR BINDINGS ARE 1-BASED
-                let value:Any? = data[valueNumber]
-                
-                switch value{
-                case let intvalue as Int:
-                    sqlite3_bind_int(executeStatement, oneBasedColumNumber, Int32(intvalue))
-                case let intvalue as UInt:
-                    sqlite3_bind_int(executeStatement, oneBasedColumNumber, Int32(intvalue))
-                case let intvalue as UInt32:
-                    sqlite3_bind_int(executeStatement, oneBasedColumNumber, Int32(intvalue))
-                case let doubleValue as Double:
-                    sqlite3_bind_double(executeStatement, oneBasedColumNumber, doubleValue)
-                case let stringValue as String:
-                    sqlite3_bind_text(executeStatement, oneBasedColumNumber, (stringValue as NSString).utf8String, -1, nil)
-                case let dataValue as Data:
-                    _ = dataValue.withUnsafeBytes{
-                        sqlite3_bind_blob(executeStatement, oneBasedColumNumber, $0.baseAddress, Int32($0.count), nil)
+            if valueCount > 0{
+                for valueNumber in 0...valueCount-1 {
+                    let oneBasedColumNumber = Int32(valueNumber+1) // COLUMS FOR BINDINGS ARE 1-BASED
+                    let value:Any? = data[valueNumber]
+                    
+                    switch value{
+                    case let intvalue as Int:
+                        sqlite3_bind_int(executeStatement, oneBasedColumNumber, Int32(intvalue))
+                    case let intvalue as UInt:
+                        sqlite3_bind_int(executeStatement, oneBasedColumNumber, Int32(intvalue))
+                    case let intvalue as UInt32:
+                        sqlite3_bind_int(executeStatement, oneBasedColumNumber, Int32(intvalue))
+                    case let doubleValue as Double:
+                        sqlite3_bind_double(executeStatement, oneBasedColumNumber, doubleValue)
+                    case let stringValue as String:
+                        sqlite3_bind_text(executeStatement, oneBasedColumNumber, (stringValue as NSString).utf8String, -1, nil)
+                    case let dataValue as Data:
+                        _ = dataValue.withUnsafeBytes{
+                            sqlite3_bind_blob(executeStatement, oneBasedColumNumber, $0.baseAddress, Int32($0.count), nil)
+                        }
+                    default:
+                        Debugger.shared.log(debugLevel:.Native(logType:.error),  "Binding of \(value ?? "nil") is not supported by JVSQL")
+                        break
                     }
-                default:
-                    JVDebugger.shared.log(debugLevel: .Error,  "Binding of \(value ?? "nil") is not supported by JVSQL")
-                    break
                 }
             }
         } else{
-            JVDebugger.shared.log(debugLevel: .Error,  "Statement '\(executeStatementString)' could not be prepared")
+            Debugger.shared.log(debugLevel:.Native(logType:.error),  "Statement '\(executeStatementString)' could not be prepared")
         }
         let result = sqlite3_step(executeStatement)
         if result != SQLITE_DONE {
-            JVDebugger.shared.log(debugLevel: .Error,  "Error \(result) while executing '\(executeStatementString)'")
+            Debugger.shared.log(debugLevel:.Native(logType:.error),  "Error \(result) while executing '\(executeStatementString)'")
         }
         
         sqlite3_finalize(executeStatement)
     }
     
+}
+
+// MARK: - SQL utilities
+enum fieldType:String{
+    case Integer = "Integer"
+    case Float = "REAL"
+    case String = "TEXT"
+    case Data = "BLOB"
+}
+
+enum fieldAttribute{
+    case primaryKey
+    case foreignKey
+}
+
+
+extension SQLdatabase{
     
-    public func autoCreateSqlTables<T>(forTypes recordTypes:[T]){
+    // Convinience method to create a SQL-table based on some SQLRecordable-instance
+    // Doesn't work on the Class or Sruct itself because Swifts-introspection is'nt fully supported on types
+    // only on instances
+    public func autoCreateTableFor<T:SQLRecordable>(record:T, includeForeignKeys foreignKeys:[String]?=nil){
         
-        recordTypes.forEach{ recordType in
+        typealias TableName = String
+        typealias FieldDefinition = String
+        
+        var tableAndFieldDefs:[TableName:[FieldDefinition]] = [:]
+        
+        func addField(tableName:TableName, fieldName:String, fieldType:fieldType, fieldAttributes:[fieldAttribute]?=nil){
+            var fieldDefs = tableAndFieldDefs[tableName] ?? []
             
-            let tableName = String(describing: recordType)
-            let existingTables:SQLRecordSet? = select(statement:"SELECT name FROM sqlite_master WHERE type='table' AND name='\(tableName)'")
+            var fieldDefinition = "\(fieldName) \(fieldType.rawValue)"
+            if let attributes = fieldAttributes{
+                if attributes.contains(.primaryKey){
+                    fieldDefinition += " PRIMARY KEY"
+                }
+                if attributes.contains(.foreignKey){
+                    let referencedTable =  fieldName.replacingOccurrences(of: "ID", with:"")
+                    let foreignKey = fieldName
+                    fieldDefinition += " REFERENCES '\(referencedTable)' ('\(foreignKey)')"
+                }
+            }
+            fieldDefs.append(fieldDefinition)
+            tableAndFieldDefs[tableName] = fieldDefs
+        }
+        
+        
+        let tableName = typeName(of: record).uppercasedFirst
+        let primaryKeyName = "\(tableName.camelCased)ID"
+        let existingTables:SQLRecordSet? = select(statement:"SELECT name FROM sqlite_master WHERE type='table' AND name='\(tableName)'")
+        
+        if existingTables == nil{
             
-            if existingTables == nil{
+            // Create a default PK-field
+            addField(tableName:tableName, fieldName:primaryKeyName, fieldType: .Integer, fieldAttributes: [.primaryKey])
+            
+            for case let (fieldName?, fieldValue) in propertyInfo(of: record) {
                 
-                let typeProperties = propertyInfo(of: recordType)
-                var fieldDefinitions:[String] = []
-                
-                for case let (name?, value) in typeProperties {
-                    let fieldName:String = name
-                    var fieldType:String = "INTEGER"
-                    
-                    switch value{
+                let unwrappedFieldValue = unwrapIfOptional(any: fieldValue)
+                let fieldType = type(of: unwrappedFieldValue)
+
+                if fieldName != primaryKeyName{
+                    switch unwrappedFieldValue{
                     case is Int, is UInt, is UInt32:
-                        fieldType = "INTEGER"
+                        addField(tableName:tableName, fieldName:fieldName, fieldType: .Integer)
                     case is Float, is Double:
-                        fieldType = "REAL"
+                        addField(tableName:tableName, fieldName:fieldName, fieldType: .Float)
                     case is String:
-                        fieldType = "TEXT"
+                        addField(tableName:tableName, fieldName:fieldName, fieldType: .String)
                     case is Data:
-                        fieldType = "BLOB"
+                        addField(tableName:tableName, fieldName:fieldName, fieldType: .Data)
+                    case is Array<Any>:
+                        // Arrays define To-Many-relationships
+                        addField(tableName:fieldName, fieldName:primaryKeyName, fieldType: .Integer, fieldAttributes: [.foreignKey])
+                    //   case is Any
+                    //                      // Structs define To-one-relationships
+                    //                      addField(tableName:fieldName, fieldName:primaryKeyName, fieldType: .Integer, fieldAttributes: [.foreignKey])
+                    case is AnyClass:
+                        // Classes define To-one-relationships
+                        addField(tableName:fieldName, fieldName:primaryKeyName, fieldType: .Integer, fieldAttributes: [.foreignKey])
                     default:
-                        let keyStyle = Mirror(reflecting: value).displayStyle
-                        let isToOneRelationShip = (keyStyle == .struct) || (keyStyle == .class)
-                        let isToManyRelationShip = (keyStyle == .collection)
-                        
-                        JVDebugger.shared.log(debugLevel: .Error,  "SQL-fields of type \(typeName(of: value)) couldn't be created")
-                        break
+                             Debugger.shared.log(debugLevel:.Native(logType:.error),  "SQL-fields of type \(fieldType) couldn't be created")
                     }
                     
-                    fieldDefinitions.append("\(fieldName) \(fieldType)")
                 }
-                
-                let executeStatementString = "CREATE TABLE \(tableName)( \(fieldDefinitions.joined(separator: ",")) )"
-                
+            }
+            
+            // Create the actual tables and their fields
+            for (tableName, fieldDefs) in tableAndFieldDefs{
+                let executeStatementString = "CREATE TABLE \(tableName)( \(fieldDefs.joined(separator: ",")) )"
+                print(executeStatementString)
                 execute(statement:executeStatementString, data:[])
             }
+            
         }
+        
+        
     }
     
     
 }
+
 
 // MARK: - SQLRecordable protocol
 public protocol SQLRecordable: SQLExpressable {
@@ -311,27 +369,27 @@ public extension SQLExpressable{
     }
     
     var names: String{
-        let propertiesIntrospection = propertyInfo(of: self)
+        let propertiesIntrospection = Mirror(reflecting: self).children
         return propertiesIntrospection.compactMap( {shouldBeIncluded($0) ? $0.label! : nil} ).joined(separator: ",")
     }
     
     var placeholders: String{
-        let propertiesIntrospection = propertyInfo(of: self)
+        let propertiesIntrospection = Mirror(reflecting: self).children
         return propertiesIntrospection.compactMap( {shouldBeIncluded($0) ? "?" : nil} ).joined(separator: ",")
     }
     
     var pairs: String{
-        let propertiesIntrospection = propertyInfo(of: self)
+        let propertiesIntrospection = Mirror(reflecting: self).children
         return propertiesIntrospection.compactMap( {shouldBeIncluded($0) ? "\($0.label!)=?" : nil} ).joined(separator: ",")
     }
     
     var values: [Any]{
-        let propertiesIntrospection = propertyInfo(of: self)
-        return propertiesIntrospection.compactMap( {shouldBeIncluded($0) ? unwrap(any:$0.value) : nil} ) // Try to downcast the Any-property (that might hide an optional) to a string
+        let propertiesIntrospection = Mirror(reflecting: self).children
+        return propertiesIntrospection.compactMap( {shouldBeIncluded($0) ? unwrapIfOptional(any: $0.value) : nil} ) // Try to downcast the Any-property (that might hide an optional) to a string
     }
     
     var matchConditions:String{
-        let propertiesIntrospection = propertyInfo(of: self)
+        let propertiesIntrospection = Mirror(reflecting: self).children
         return propertiesIntrospection.compactMap( {
             var matchCondition:String? = nil
             if shouldGetMatchedAgainst($0) {
@@ -341,7 +399,7 @@ public extension SQLExpressable{
                 
                 // Convert the propertvalue into a string that one can search for
                 let propertyValue = $0.value
-                let unwrappedAnyValue:Any = unwrap(any:propertyValue) // unwrap optionals that might hide in the Any-value
+                let unwrappedAnyValue:Any = unwrapIfOptional(any: propertyValue) // unwrap optionals that might hide in the Any-value
                 var searchValue =  String(describing:unwrappedAnyValue)
                 if type(of:unwrappedAnyValue) == String.self{
                     searchValue = searchValue.quote()
@@ -386,19 +444,21 @@ public extension SQLExpressable{
 
 // MARK: - SQLSource protocol
 
-public protocol SQLSource: FullyExtendable{
+
+public protocol SQLSource: Encodable, FullyExtendable{
     
-    var dbase:JVSQLdbase? { get set }
+    var dbase:SQLdatabase? { get set }
     var tableName:String { get }
-    var primaryKeyNames:[String] { get }
+    var primaryKeyNames:[String] { get set}
     
 }
 
+
 public extension SQLSource{
     
-    var dbase: JVSQLdbase?{
+    var dbase: SQLdatabase?{
         get{
-            return property(name: "dbase") as? JVSQLdbase
+            return property(name: "dbase") as? SQLdatabase
         }
         set{
             setProperty(name: "dbase", to: newValue as Any)
@@ -421,9 +481,10 @@ public extension SQLSource{
 }
 
 
-//TODO: - Mimic FileMaker-methodologie based on JVSQLdbase
 
-//public class JVFPproxy:JVSQLdbase{
+//TODO: - Mimic FileMaker-methodologie based on SQLdatabase
+
+//public class JVFPproxy:SQLdatabase{
 //
 //    public enum Mode{
 //        case layout

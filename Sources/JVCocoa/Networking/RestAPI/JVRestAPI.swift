@@ -31,7 +31,7 @@ public class RestAPI<E:StringRepresentableEnum, P:StringRepresentableEnum>{
         
     }
     
-    public func publish<T:Decodable>(method:RESTmethod = .GET,command:E, parameters:[P:String], maxRetries:Int = 2, retryDelay:UInt32 = 2)->AnyPublisher<T?, Error>{
+    public func publish<T:Decodable>(method:RESTmethod = .GET,command:E, parameters:[P:String], maxRetries:Int = 2, retryDelay:Int = 2)->AnyPublisher<T?, Error>{
         
         var url:URL?
         var request:URLRequest! = nil
@@ -45,17 +45,21 @@ public class RestAPI<E:StringRepresentableEnum, P:StringRepresentableEnum>{
         
         switch method {
         case .GET:
-            url = URL(string:baseURL+command.stringValue+"?"+form.parametersString)
+            var urlComps = URLComponents(string: baseURL+command.stringValue)
+            urlComps?.queryItems = form.urlQueryItems
+            url = urlComps?.url
             request = URLRequest(url: url!)
         case .POST:
             url = URL(string:baseURL+command.stringValue)
             request = URLRequest(url: url!)
             request.allHTTPHeaderFields = ["Content-Type" : "application/x-www-form-urlencoded"]
             request.httpBody = form.composeBody(type: .FormEncoded)
+            break
         default:
             print("⚠️ JVRestAPI: Unhandled REST-method")
         }
         request.httpMethod = method.rawValue
+        request.timeoutInterval = 10
         return DecodingPublisher.Publisher(from: request, retryDelay:retryDelay, maxRetries: maxRetries)
         
     }
@@ -63,19 +67,14 @@ public class RestAPI<E:StringRepresentableEnum, P:StringRepresentableEnum>{
 }
 
 public struct HTTPForm<P:StringRepresentableEnum>{
+      
+    private var stringRepresentations:[(String, String)]
+    private var parametersAndValues:[String]
+    public var urlQueryItems:[URLQueryItem]
     
-    public var parametersToInclude:[P]
-    public var currentParameters:[P:String]
-    public var parametersString:String{
-        parametersAndValues.joined(separator: "&")
-    }
     public var description:String{
         parametersAndValues.joined(separator: "\n")
     }
-    
-    private var filteredParameters:[P:String]
-    private var stringRepresentations:[(String, String)]
-    private var parametersAndValues:[String]
     
     public enum HTTPbodyType{
         case Json
@@ -83,20 +82,24 @@ public struct HTTPForm<P:StringRepresentableEnum>{
     }
     
     public init(parametersToInclude:[P], currentParameters:[P:String]){
-        self.parametersToInclude = parametersToInclude
-        self.currentParameters = currentParameters
-        self.filteredParameters = currentParameters.filter   {(parameterName, parameterValue) in parametersToInclude.contains(parameterName)}
-        self.stringRepresentations = filteredParameters.map  {(parameterName, parameterValue) in (parameterName.stringValue, parameterValue)}
+        
+        let filteredParameters = currentParameters.filter   {(parameterName, parameterValue) in parametersToInclude.contains(parameterName)}
+        
+        self.stringRepresentations = filteredParameters.map  {(parameterName, parameterValue) in (parameterName.stringValue, Self.Encode(parameterValue))}
         self.parametersAndValues = stringRepresentations.map {parameterName, parameterValue in  "\(parameterName)=\(parameterValue)" }
+        
+        self.urlQueryItems = filteredParameters.map{ (parameterName, parameterValue) in URLQueryItem(name: parameterName.stringValue, value: parameterValue)}
     }
     
     public static func Encode(_ parameter:String)->String{
-        
+
         var encodedParameter = parameter
+        encodedParameter = encodedParameter.replacingOccurrences(of: ",", with: "%2C")
+        encodedParameter = encodedParameter.replacingOccurrences(of: " ", with: "%20")
         encodedParameter = encodedParameter.replacingOccurrences(of: "/", with: "%2F")
         encodedParameter = encodedParameter.replacingOccurrences(of: "+", with: "%2B")
         encodedParameter = encodedParameter.replacingOccurrences(of: "=", with: "%3D")
-        
+
         return encodedParameter
     }
     
@@ -107,7 +110,7 @@ public struct HTTPForm<P:StringRepresentableEnum>{
         case .Json:
             return try? JSONSerialization.data(withJSONObject: stringRepresentations, options: .prettyPrinted)
         case .FormEncoded:
-            return parametersString.data(using: .utf8)
+            return parametersAndValues.joined(separator: "&").data(using: .utf8)
         }
         
     }

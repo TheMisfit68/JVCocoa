@@ -120,5 +120,3 @@ extension String{
         return replace(matchPattern: "^\"(.*)\"$", replacementPattern: "$1", useRegex: true)
     }
 }
-
-

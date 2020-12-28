@@ -8,13 +8,6 @@
 
 import Foundation
 
-public extension Bool {
-    
-    mutating func toggle(enable:Bool = true){
-        self = (self ^^ enable)
-    }
-}
-
 /**
  Swift Logical XOR operator (a.k.a. 'Bit controlled inverter')
  
@@ -30,13 +23,13 @@ precedencegroup booleanOperatorPrecedence {
 }
 
 infix operator ^^ : booleanOperatorPrecedence
-func ^^(left: Bool, right: Bool) -> Bool {
+public func ^^(left: Bool, right: Bool) -> Bool {
     return (left != right)
 }
 
 
-extension String{
-    public var equalsTrue:Bool{
+public extension String{
+     var equalsTrue:Bool{
         return (
                 lowercased() == "true" ||
                 lowercased() == "yes" ||

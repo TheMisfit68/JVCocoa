@@ -7,7 +7,7 @@
 import Foundation
 import os.log
 
-@available(OSX 11.0, *)
+
 public extension FileManager{
     
     func checkForDirectory(_ directoryURL:URL, createIfNeeded:Bool = false){
@@ -34,7 +34,7 @@ public extension FileManager{
             try moveItem(at: originalURL, to: newURL)
         }
         catch let error as NSError {
-            Debugger.shared.log(debugLevel: .Native(logType: OSLogType.error), "Could not rename file from \(originalName) to \(newName):\n\(error)")
+            Debugger.shared.log(debugLevel: .Native(logType:.error), "Could not rename file from \(originalName) to \(newName):\n\(error)")
         }
         
     }

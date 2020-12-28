@@ -8,7 +8,7 @@
 import Foundation
 import os.log
 
-@available(OSX 11.0, *)
+
 extension OSLogType{
     
     public var Icon:String{
