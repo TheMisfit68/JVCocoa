@@ -11,7 +11,7 @@ public typealias TimeStamp = TimeInterval
 
 public extension TimeInterval {
 	
-	public static var CurrentTimeStamp:TimeStamp {
+	static var CurrentTimeStamp:TimeStamp {
 		let now = Date()
 		return (now.timeIntervalSince1970 * 1000.0)
 	}
