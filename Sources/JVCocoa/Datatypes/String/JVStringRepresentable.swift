@@ -8,22 +8,33 @@
 import Foundation
 
 // For Any Stringrepresentable
-public protocol StringRepresentable { var stringValue:String{get} }
-// For Enums
-public protocol StringRepresentableEnum: StringRepresentable & RawRepresentable & Hashable {}
-
-
-// Implemenation for rawsrepresentable Strings
-public extension StringRepresentable where Self:RawRepresentable, Self.RawValue == String{
-     var stringValue:String{
-        return self.rawValue as String
-    }
+public protocol StringRepresentable:Hashable {
+	var stringValue:String{get}
 }
 
-// Implemenation for other type of Strings
-public extension StringRepresentable where Self:StringProtocol {
-     var stringValue:String{
-        return String(describing: self)
-    }
+
+// Make members of StringProtocol conform by default
+extension String:StringRepresentable {
+	public var stringValue:String{
+		return self
+	}
 }
+
+
+extension Substring:StringRepresentable {
+	public var stringValue:String{
+		return String(self)
+	}
+}
+
+
+// For Enums with a rawvalue of type String
+public protocol StringRepresentableEnum: StringRepresentable & RawRepresentable where Self.RawValue == String{}
+
+public extension StringRepresentableEnum {
+	var stringValue:String{
+		return self.rawValue as String
+	}
+}
+
 

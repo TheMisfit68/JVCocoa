@@ -14,9 +14,11 @@ public extension Comparable{
 		copiedValue.limitBetween(range)
 		return copiedValue
 	}
-
+	
 	mutating func limitBetween(_ range: ClosedRange<Self>){
 		self = min(max(self, range.lowerBound), range.upperBound)
 	}
+	
+	// TODO: - Implement a function to rescale between 2 ranges
 	
 }
