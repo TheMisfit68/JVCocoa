@@ -29,6 +29,7 @@ public class WebSocket:NSObject, URLSessionWebSocketDelegate {
         
         webSocketTask = urlSession.webSocketTask(with:urlRequest)
         self.webSocketDelegate = delegate
+		
     }
     
     public func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
@@ -42,8 +43,7 @@ public class WebSocket:NSObject, URLSessionWebSocketDelegate {
     public func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         
         // Pass test server with self signed certificate
-        //TODO: - check why this IPadress was  hard coded inhere!
-        if challenge.protectionSpace.host == "192.168.0.50" {
+		if let trustedHost = webSocketTask.currentRequest?.url?.host, challenge.protectionSpace.host == trustedHost {
             completionHandler(.useCredential, URLCredential(trust: challenge.protectionSpace.serverTrust!))
         } else {
             completionHandler(.performDefaultHandling, nil)
